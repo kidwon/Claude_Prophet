@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -23,7 +24,9 @@ var AppConfig *Config
 
 func Load() error {
 	// Load .env file if it exists
-	_ = godotenv.Load()
+	if err := godotenv.Load(); err != nil {
+		return fmt.Errorf("error loading .env file: %v", err)
+	}
 
 	AppConfig = &Config{
 		AlpacaAPIKey:      os.Getenv("ALPACA_API_KEY"),
