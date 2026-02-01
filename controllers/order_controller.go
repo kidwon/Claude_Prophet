@@ -42,7 +42,7 @@ func NewOrderController(
 type BuyRequest struct {
 	Symbol      string   `json:"symbol" binding:"required"`
 	Qty         float64  `json:"qty" binding:"required,gt=0"`
-	Type        string   `json:"type"` // "market", "limit", "stop", "stop_limit"
+	Type        string   `json:"type"`          // "market", "limit", "stop", "stop_limit"
 	TimeInForce string   `json:"time_in_force"` // "day", "gtc", "ioc", "fok"
 	LimitPrice  *float64 `json:"limit_price,omitempty"`
 	StopPrice   *float64 `json:"stop_price,omitempty"`
@@ -52,7 +52,7 @@ type BuyRequest struct {
 type SellRequest struct {
 	Symbol      string   `json:"symbol" binding:"required"`
 	Qty         float64  `json:"qty" binding:"required,gt=0"`
-	Type        string   `json:"type"` // "market", "limit", "stop", "stop_limit"
+	Type        string   `json:"type"`          // "market", "limit", "stop", "stop_limit"
 	TimeInForce string   `json:"time_in_force"` // "day", "gtc", "ioc", "fok"
 	LimitPrice  *float64 `json:"limit_price,omitempty"`
 	StopPrice   *float64 `json:"stop_price,omitempty"`
@@ -289,6 +289,16 @@ func (oc *OrderController) HandleGetOrders(c *gin.Context) {
 	c.JSON(200, orders)
 }
 
+// HandleGetTrades handles HTTP get historical trades requests
+func (oc *OrderController) HandleGetTrades(c *gin.Context) {
+	trades, err := oc.storageService.GetAllTrades()
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, trades)
+}
+
 // HandleGetQuote handles HTTP get quote requests
 // GET /api/v1/market/quote/:symbol
 func (oc *OrderController) HandleGetQuote(c *gin.Context) {
@@ -376,14 +386,14 @@ func (oc *OrderController) HandleGetBars(c *gin.Context) {
 
 // OptionsOrderRequest represents an options order request
 type OptionsOrderRequest struct {
-	Symbol        string   `json:"symbol" binding:"required"`
-	Underlying    string   `json:"underlying"`
-	Qty           float64  `json:"qty" binding:"required,gt=0"`
-	Side          string   `json:"side" binding:"required,oneof=buy sell"`
-	PositionIntent string  `json:"position_intent"` // "buy_to_open", "buy_to_close", "sell_to_open", "sell_to_close"
-	Type          string   `json:"type"` // "market", "limit"
-	TimeInForce   string   `json:"time_in_force"` // "day", "gtc"
-	LimitPrice    *float64 `json:"limit_price,omitempty"`
+	Symbol         string   `json:"symbol" binding:"required"`
+	Underlying     string   `json:"underlying"`
+	Qty            float64  `json:"qty" binding:"required,gt=0"`
+	Side           string   `json:"side" binding:"required,oneof=buy sell"`
+	PositionIntent string   `json:"position_intent"` // "buy_to_open", "buy_to_close", "sell_to_open", "sell_to_close"
+	Type           string   `json:"type"`            // "market", "limit"
+	TimeInForce    string   `json:"time_in_force"`   // "day", "gtc"
+	LimitPrice     *float64 `json:"limit_price,omitempty"`
 }
 
 // PlaceOptionsOrder handles POST /api/options/order
@@ -410,14 +420,14 @@ func (oc *OrderController) PlaceOptionsOrder(c *gin.Context) {
 	}
 
 	order := &interfaces.OptionsOrder{
-		Symbol:        req.Symbol,
-		Underlying:    req.Underlying,
-		Qty:           req.Qty,
-		Side:          req.Side,
+		Symbol:         req.Symbol,
+		Underlying:     req.Underlying,
+		Qty:            req.Qty,
+		Side:           req.Side,
 		PositionIntent: req.PositionIntent,
-		Type:          req.Type,
-		TimeInForce:   req.TimeInForce,
-		LimitPrice:    req.LimitPrice,
+		Type:           req.Type,
+		TimeInForce:    req.TimeInForce,
+		LimitPrice:     req.LimitPrice,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

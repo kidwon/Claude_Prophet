@@ -1,0 +1,14 @@
+name = "prophet-config-service"
+main = "config-service.js"
+compatibility_date = "2024-01-01"
+
+# Define secrets that will be set via CLI
+# Use: wrangler secret put <SECRET_NAME>
+# Available secrets:
+# - CONFIG_ACCESS_TOKEN (required)
+# - ALPACA_API_KEY (required)
+# - ALPACA_SECRET_KEY (required)
+# - GEMINI_API_KEY (optional)
+# - ALPACA_BASE_URL (optional)
+# - ALPACA_ENDPOINT (optional)
+# - ALPACA_PAPER (optional)

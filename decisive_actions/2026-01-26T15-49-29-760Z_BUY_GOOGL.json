@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-01-26T15:49:29.760Z",
+  "action": "BUY",
+  "symbol": "GOOGL",
+  "reasoning": "GOOGL Mar 20 $335 Call swing trade. Catalysts: AI/Cloud strength narrative, RBC Buy rating, earnings week ahead. Delta 0.52, 53 DTE within rules. Tight spread 0.8%. Position size $14,272 (14.5% of portfolio) within max 15% rule.",
+  "market_data": {
+    "price": 332.24,
+    "strike": 335,
+    "delta": 0.52,
+    "premium": 17.84,
+    "expiration": "2026-03-20",
+    "contracts": 8
+  }
+}

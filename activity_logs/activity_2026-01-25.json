@@ -1,0 +1,45 @@
+{
+  "date": "2026-01-25",
+  "session_start": "2026-01-25T20:02:01.503752+09:00",
+  "session_end": "0001-01-01T00:00:00Z",
+  "summary": {
+    "total_trades": 0,
+    "positions_opened": 0,
+    "positions_closed": 0,
+    "winning_trades": 0,
+    "losing_trades": 0,
+    "total_pnl": 0,
+    "total_pnl_percent": 0,
+    "largest_win": 0,
+    "largest_loss": 0,
+    "starting_capital": 100000,
+    "ending_capital": 0,
+    "capital_deployed": 0,
+    "active_positions": 0,
+    "stocks_analyzed": 0,
+    "news_articles_read": 0,
+    "web_searches": 0
+  },
+  "activities": [
+    {
+      "timestamp": "2026-01-27T00:22:09.708069+09:00",
+      "type": "DECISION",
+      "action": "Opened 4 options positions - 3 swings + 1 scalp",
+      "details": {
+        "portfolio_pct": 42.4,
+        "positions": [
+          "AMD Mar $250C x5",
+          "TSLA Mar $440C x4",
+          "META Mar $670C x3",
+          "SPY Jan30 $693C x10"
+        ],
+        "total_deployed": 42402
+      },
+      "reasoning": "AMD: Ryzen 9850X3D launch Jan 29 catalyst. TSLA: Earnings week momentum. META: Strong Q4 setup per analyst. SPY: Scalp on market momentum. All within rules: 53 DTE swings (50-120 rule), 4 DTE scalp (2-5 rule), delta 0.5-0.6, tight spreads, limit orders."
+    }
+  ],
+  "positions_opened": [],
+  "positions_closed": [],
+  "market_intelligence": [],
+  "decisions": []
+}

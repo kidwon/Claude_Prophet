@@ -16,47 +16,47 @@ import (
 
 // ManagedPosition represents a position with automated risk management
 type ManagedPosition struct {
-	ID                string                 `json:"id"`
-	Symbol            string                 `json:"symbol"`
-	Side              string                 `json:"side"` // "buy" or "sell"
-	Strategy          string                 `json:"strategy"` // "SWING_TRADE", "LONG_TERM", "DAY_TRADE"
+	ID       string `json:"id"`
+	Symbol   string `json:"symbol"`
+	Side     string `json:"side"`     // "buy" or "sell"
+	Strategy string `json:"strategy"` // "SWING_TRADE", "LONG_TERM", "DAY_TRADE"
 
 	// Entry details
-	Quantity          float64                `json:"quantity"`
-	EntryPrice        float64                `json:"entry_price"`
-	EntryOrderID      string                 `json:"entry_order_id"`
-	EntryOrderType    string                 `json:"entry_order_type"` // "market", "limit"
-	AllocationDollars float64                `json:"allocation_dollars"`
+	Quantity          float64 `json:"quantity"`
+	EntryPrice        float64 `json:"entry_price"`
+	EntryOrderID      string  `json:"entry_order_id"`
+	EntryOrderType    string  `json:"entry_order_type"` // "market", "limit"
+	AllocationDollars float64 `json:"allocation_dollars"`
 
 	// Risk management
-	StopLossPrice     float64                `json:"stop_loss_price"`
-	StopLossPercent   float64                `json:"stop_loss_percent"`
-	StopLossOrderID   string                 `json:"stop_loss_order_id,omitempty"`
-	TrailingStop      bool                   `json:"trailing_stop"`
-	TrailingPercent   float64                `json:"trailing_percent,omitempty"`
+	StopLossPrice   float64 `json:"stop_loss_price"`
+	StopLossPercent float64 `json:"stop_loss_percent"`
+	StopLossOrderID string  `json:"stop_loss_order_id,omitempty"`
+	TrailingStop    bool    `json:"trailing_stop"`
+	TrailingPercent float64 `json:"trailing_percent,omitempty"`
 
 	// Profit targets
-	TakeProfitPrice   float64                `json:"take_profit_price"`
-	TakeProfitPercent float64                `json:"take_profit_percent"`
-	TakeProfitOrderID string                 `json:"take_profit_order_id,omitempty"`
+	TakeProfitPrice   float64 `json:"take_profit_price"`
+	TakeProfitPercent float64 `json:"take_profit_percent"`
+	TakeProfitOrderID string  `json:"take_profit_order_id,omitempty"`
 
 	// Partial exit strategy
-	PartialExit       *PartialExitConfig     `json:"partial_exit,omitempty"`
-	PartialExitOrders []string               `json:"partial_exit_orders,omitempty"`
+	PartialExit       *PartialExitConfig `json:"partial_exit,omitempty"`
+	PartialExitOrders []string           `json:"partial_exit_orders,omitempty"`
 
 	// Status tracking
-	Status            string                 `json:"status"` // "PENDING", "ACTIVE", "PARTIAL", "CLOSED", "STOPPED_OUT", "FAILED"
-	CurrentPrice      float64                `json:"current_price"`
-	UnrealizedPL      float64                `json:"unrealized_pl"`
-	UnrealizedPLPC    float64                `json:"unrealized_pl_percent"`
-	RemainingQty      float64                `json:"remaining_qty"`
+	Status         string  `json:"status"` // "PENDING", "ACTIVE", "PARTIAL", "CLOSED", "STOPPED_OUT", "FAILED"
+	CurrentPrice   float64 `json:"current_price"`
+	UnrealizedPL   float64 `json:"unrealized_pl"`
+	UnrealizedPLPC float64 `json:"unrealized_pl_percent"`
+	RemainingQty   float64 `json:"remaining_qty"`
 
 	// Metadata
-	CreatedAt         time.Time              `json:"created_at"`
-	UpdatedAt         time.Time              `json:"updated_at"`
-	ClosedAt          *time.Time             `json:"closed_at,omitempty"`
-	Notes             string                 `json:"notes,omitempty"`
-	Tags              []string               `json:"tags,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	ClosedAt  *time.Time `json:"closed_at,omitempty"`
+	Notes     string     `json:"notes,omitempty"`
+	Tags      []string   `json:"tags,omitempty"`
 }
 
 // PartialExitConfig defines partial profit taking strategy
@@ -69,31 +69,31 @@ type PartialExitConfig struct {
 
 // PlaceManagedPositionRequest represents request to open a managed position
 type PlaceManagedPositionRequest struct {
-	Symbol            string              `json:"symbol" binding:"required"`
-	Side              string              `json:"side" binding:"required"` // "buy" or "sell"
-	Strategy          string              `json:"strategy"` // "SWING_TRADE", "LONG_TERM", "DAY_TRADE"
-	AllocationDollars float64             `json:"allocation_dollars" binding:"required,gt=0"`
+	Symbol            string  `json:"symbol" binding:"required"`
+	Side              string  `json:"side" binding:"required"` // "buy" or "sell"
+	Strategy          string  `json:"strategy"`                // "SWING_TRADE", "LONG_TERM", "DAY_TRADE"
+	AllocationDollars float64 `json:"allocation_dollars" binding:"required,gt=0"`
 
 	// Entry configuration
-	EntryStrategy     string              `json:"entry_strategy"` // "market", "limit"
-	EntryPrice        *float64            `json:"entry_price,omitempty"` // Required for limit orders
+	EntryStrategy string   `json:"entry_strategy"`        // "market", "limit"
+	EntryPrice    *float64 `json:"entry_price,omitempty"` // Required for limit orders
 
 	// Risk management (one of these required)
-	StopLossPrice     *float64            `json:"stop_loss_price,omitempty"`
-	StopLossPercent   *float64            `json:"stop_loss_percent,omitempty"`
-	TrailingStop      bool                `json:"trailing_stop"`
-	TrailingPercent   float64             `json:"trailing_percent,omitempty"`
+	StopLossPrice   *float64 `json:"stop_loss_price,omitempty"`
+	StopLossPercent *float64 `json:"stop_loss_percent,omitempty"`
+	TrailingStop    bool     `json:"trailing_stop"`
+	TrailingPercent float64  `json:"trailing_percent,omitempty"`
 
 	// Profit targets (one of these required)
-	TakeProfitPrice   *float64            `json:"take_profit_price,omitempty"`
-	TakeProfitPercent *float64            `json:"take_profit_percent,omitempty"`
+	TakeProfitPrice   *float64 `json:"take_profit_price,omitempty"`
+	TakeProfitPercent *float64 `json:"take_profit_percent,omitempty"`
 
 	// Partial exit (optional)
-	PartialExit       *PartialExitConfig  `json:"partial_exit,omitempty"`
+	PartialExit *PartialExitConfig `json:"partial_exit,omitempty"`
 
 	// Metadata
-	Notes             string              `json:"notes,omitempty"`
-	Tags              []string            `json:"tags,omitempty"`
+	Notes string   `json:"notes,omitempty"`
+	Tags  []string `json:"tags,omitempty"`
 }
 
 // PositionManager handles automated position management
@@ -104,10 +104,11 @@ type PositionManager struct {
 
 	positions      map[string]*ManagedPosition // position_id -> position
 	mu             sync.RWMutex
+	activityLogger *ActivityLogger
 	logger         *logrus.Logger
 
-	ctx            context.Context
-	cancel         context.CancelFunc
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewPositionManager creates a new position manager
@@ -115,6 +116,7 @@ func NewPositionManager(
 	tradingService interfaces.TradingService,
 	dataService interfaces.DataService,
 	storageService *database.LocalStorage,
+	activityLogger *ActivityLogger,
 ) *PositionManager {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{
@@ -127,6 +129,7 @@ func NewPositionManager(
 		tradingService: tradingService,
 		dataService:    dataService,
 		storageService: storageService,
+		activityLogger: activityLogger,
 		positions:      make(map[string]*ManagedPosition),
 		logger:         logger,
 		ctx:            ctx,
@@ -347,6 +350,22 @@ func (pm *PositionManager) checkEntryOrder(ctx context.Context, position *Manage
 
 		// Save to database
 		pm.savePositionToDB(position)
+
+		// Log to activity logger
+		if pm.activityLogger != nil {
+			pm.activityLogger.LogPositionOpened(
+				position.Symbol,
+				position.Side,
+				position.Quantity,
+				position.EntryPrice,
+				position.AllocationDollars,
+				position.StopLossPrice,
+				position.TakeProfitPrice,
+				3, // Default conviction for managed positions
+				position.Notes,
+				position.Tags,
+			)
+		}
 	}
 }
 
@@ -483,6 +502,7 @@ func (pm *PositionManager) manageRiskOrders(ctx context.Context, position *Manag
 			position.ClosedAt = &now
 			pm.logger.WithField("position_id", position.ID).Info("Position stopped out")
 			pm.savePositionToDB(position)
+			pm.recordTrade(position)
 			return
 		}
 	}
@@ -496,6 +516,7 @@ func (pm *PositionManager) manageRiskOrders(ctx context.Context, position *Manag
 			position.ClosedAt = &now
 			pm.logger.WithField("position_id", position.ID).Info("Position closed at profit target")
 			pm.savePositionToDB(position)
+			pm.recordTrade(position)
 			return
 		}
 	}
@@ -702,6 +723,7 @@ func (pm *PositionManager) CloseManagedPosition(ctx context.Context, positionID 
 
 	// Save to database
 	pm.savePositionToDB(position)
+	pm.recordTrade(position)
 
 	pm.logger.WithField("position_id", positionID).Info("Position manually closed")
 
@@ -819,6 +841,74 @@ func (pm *PositionManager) loadPositionsFromDB() error {
 func (pm *PositionManager) savePositionToDB(position *ManagedPosition) error {
 	dbPosition := pm.managedPositionToDB(position)
 	return pm.storageService.SaveManagedPosition(dbPosition)
+}
+
+// recordTrade records a closed trade to database and activity logger
+func (pm *PositionManager) recordTrade(position *ManagedPosition) {
+	if position.Status != "CLOSED" && position.Status != "STOPPED_OUT" {
+		return
+	}
+
+	// Calculate PnL
+	exitPrice := position.CurrentPrice
+	if exitPrice == 0 {
+		// Fallback to entry price if current price is unknown (shouldn't happen for closed trades)
+		exitPrice = position.EntryPrice
+	}
+
+	pnl := 0.0
+	pnlPercent := 0.0
+	if position.Side == "buy" {
+		pnl = (exitPrice - position.EntryPrice) * position.Quantity
+		if position.EntryPrice > 0 {
+			pnlPercent = ((exitPrice - position.EntryPrice) / position.EntryPrice) * 100
+		}
+	} else {
+		pnl = (position.EntryPrice - exitPrice) * position.Quantity
+		if position.EntryPrice > 0 {
+			pnlPercent = ((position.EntryPrice - exitPrice) / position.EntryPrice) * 100
+		}
+	}
+
+	trade := &models.DBTrade{
+		Symbol:       position.Symbol,
+		EntryPrice:   position.EntryPrice,
+		ExitPrice:    exitPrice,
+		Qty:          position.Quantity,
+		Side:         position.Side,
+		PnL:          pnl,
+		PnLPercent:   pnlPercent,
+		EntryTime:    position.CreatedAt,
+		ExitTime:     *position.ClosedAt,
+		Duration:     int64(position.ClosedAt.Sub(position.CreatedAt).Seconds()),
+		StrategyName: position.Strategy,
+		Metadata:     position.Notes,
+	}
+
+	if err := pm.storageService.SaveTrade(trade); err != nil {
+		pm.logger.WithError(err).Error("Failed to record trade in database")
+	} else {
+		pm.logger.WithFields(logrus.Fields{
+			"symbol": position.Symbol,
+			"pnl":    pnl,
+		}).Info("Trade recorded successfully")
+	}
+
+	// Also log to activity logger
+	if pm.activityLogger != nil {
+		holdDays := int(trade.Duration / 86400)
+		pm.activityLogger.LogPositionClosed(
+			position.Symbol,
+			position.Side,
+			position.Quantity,
+			position.EntryPrice,
+			exitPrice,
+			position.AllocationDollars,
+			holdDays,
+			position.Notes,
+			position.Tags,
+		)
+	}
 }
 
 // managedPositionToDB converts ManagedPosition to DBManagedPosition

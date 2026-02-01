@@ -149,15 +149,15 @@ func (s *AlpacaTradingService) GetPositions(ctx context.Context) ([]*interfaces.
 	positions := make([]*interfaces.Position, len(alpacaPositions))
 	for i, ap := range alpacaPositions {
 		positions[i] = &interfaces.Position{
-			Symbol:           ap.Symbol,
-			Qty:              ap.Qty.InexactFloat64(),
-			AvgEntryPrice:    ap.AvgEntryPrice.InexactFloat64(),
-			MarketValue:      ap.MarketValue.InexactFloat64(),
-			CostBasis:        ap.CostBasis.InexactFloat64(),
-			UnrealizedPL:     ap.UnrealizedPL.InexactFloat64(),
-			UnrealizedPLPC:   ap.UnrealizedIntradayPLPC.InexactFloat64(),
-			CurrentPrice:     ap.CurrentPrice.InexactFloat64(),
-			Side:             string(ap.Side),
+			Symbol:         ap.Symbol,
+			Qty:            ap.Qty.InexactFloat64(),
+			AvgEntryPrice:  ap.AvgEntryPrice.InexactFloat64(),
+			MarketValue:    ap.MarketValue.InexactFloat64(),
+			CostBasis:      ap.CostBasis.InexactFloat64(),
+			UnrealizedPL:   ap.UnrealizedPL.InexactFloat64(),
+			UnrealizedPLPC: ap.UnrealizedPLPC.InexactFloat64(),
+			CurrentPrice:   ap.CurrentPrice.InexactFloat64(),
+			Side:           string(ap.Side),
 		}
 	}
 
@@ -265,11 +265,11 @@ func (s *AlpacaTradingService) PlaceOptionsOrder(ctx context.Context, order *int
 type alpacaOptionsSnapshot struct {
 	Snapshots map[string]struct {
 		LatestQuote struct {
-			Ask      float64   `json:"ap"`
-			AskSize  int       `json:"as"`
-			Bid      float64   `json:"bp"`
-			BidSize  int       `json:"bs"`
-			T        time.Time `json:"t"`
+			Ask     float64   `json:"ap"`
+			AskSize int       `json:"as"`
+			Bid     float64   `json:"bp"`
+			BidSize int       `json:"bs"`
+			T       time.Time `json:"t"`
 		} `json:"latestQuote"`
 		LatestTrade struct {
 			Price float64   `json:"p"`
@@ -344,17 +344,17 @@ func (s *AlpacaTradingService) GetOptionsChain(ctx context.Context, underlying s
 		// OCC format: TSLA251219C00400000
 		// This is a simplified parser - you may want to use a proper OCC parser library
 		contract := &interfaces.OptionContract{
-			Symbol:           symbol,
-			UnderlyingSymbol: underlying,
-			Bid:              data.LatestQuote.Bid,
-			Ask:              data.LatestQuote.Ask,
-			Premium:          data.LatestTrade.Price,
+			Symbol:            symbol,
+			UnderlyingSymbol:  underlying,
+			Bid:               data.LatestQuote.Bid,
+			Ask:               data.LatestQuote.Ask,
+			Premium:           data.LatestTrade.Price,
 			ImpliedVolatility: data.ImpliedVolatility,
-			Delta:            data.Greeks.Delta,
-			Gamma:            data.Greeks.Gamma,
-			Theta:            data.Greeks.Theta,
-			Vega:             data.Greeks.Vega,
-			ExpirationDate:   expiration,
+			Delta:             data.Greeks.Delta,
+			Gamma:             data.Greeks.Gamma,
+			Theta:             data.Greeks.Theta,
+			Vega:              data.Greeks.Vega,
+			ExpirationDate:    expiration,
 			// TODO: Parse strike price and option type from OCC symbol
 		}
 		contracts = append(contracts, contract)
@@ -383,15 +383,15 @@ func (s *AlpacaTradingService) GetOptionsPosition(ctx context.Context, symbol st
 	for _, pos := range positions {
 		if pos.Symbol == symbol && pos.AssetClass == "us_option" {
 			return &interfaces.OptionsPosition{
-				Symbol:        pos.Symbol,
-				Qty:           pos.Qty.InexactFloat64(),
-				AvgEntryPrice: pos.AvgEntryPrice.InexactFloat64(),
-				MarketValue:   pos.MarketValue.InexactFloat64(),
-				CostBasis:     pos.CostBasis.InexactFloat64(),
-				UnrealizedPL:  pos.UnrealizedPL.InexactFloat64(),
-				UnrealizedPLPC: pos.UnrealizedIntradayPLPC.InexactFloat64(),
-				CurrentPrice:  pos.CurrentPrice.InexactFloat64(),
-				Side:          string(pos.Side),
+				Symbol:         pos.Symbol,
+				Qty:            pos.Qty.InexactFloat64(),
+				AvgEntryPrice:  pos.AvgEntryPrice.InexactFloat64(),
+				MarketValue:    pos.MarketValue.InexactFloat64(),
+				CostBasis:      pos.CostBasis.InexactFloat64(),
+				UnrealizedPL:   pos.UnrealizedPL.InexactFloat64(),
+				UnrealizedPLPC: pos.UnrealizedPLPC.InexactFloat64(),
+				CurrentPrice:   pos.CurrentPrice.InexactFloat64(),
+				Side:           string(pos.Side),
 			}, nil
 		}
 	}
@@ -410,15 +410,15 @@ func (s *AlpacaTradingService) ListOptionsPositions(ctx context.Context) ([]*int
 	for _, pos := range positions {
 		if pos.AssetClass == "us_option" {
 			optionsPositions = append(optionsPositions, &interfaces.OptionsPosition{
-				Symbol:        pos.Symbol,
-				Qty:           pos.Qty.InexactFloat64(),
-				AvgEntryPrice: pos.AvgEntryPrice.InexactFloat64(),
-				MarketValue:   pos.MarketValue.InexactFloat64(),
-				CostBasis:     pos.CostBasis.InexactFloat64(),
-				UnrealizedPL:  pos.UnrealizedPL.InexactFloat64(),
-				UnrealizedPLPC: pos.UnrealizedIntradayPLPC.InexactFloat64(),
-				CurrentPrice:  pos.CurrentPrice.InexactFloat64(),
-				Side:          string(pos.Side),
+				Symbol:         pos.Symbol,
+				Qty:            pos.Qty.InexactFloat64(),
+				AvgEntryPrice:  pos.AvgEntryPrice.InexactFloat64(),
+				MarketValue:    pos.MarketValue.InexactFloat64(),
+				CostBasis:      pos.CostBasis.InexactFloat64(),
+				UnrealizedPL:   pos.UnrealizedPL.InexactFloat64(),
+				UnrealizedPLPC: pos.UnrealizedPLPC.InexactFloat64(),
+				CurrentPrice:   pos.CurrentPrice.InexactFloat64(),
+				Side:           string(pos.Side),
 			})
 		}
 	}

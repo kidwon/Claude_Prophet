@@ -1,0 +1,3 @@
+Warning: .env file not found, using environment variables
+time="2026-02-01T16:09:42+09:00" level=info msg="Starting Prophet Trader Bot..."
+time="2026-02-01T16:09:42+09:00" level=fatal msg="Alpaca API credentials not configured. Please set ALPACA_API_KEY and ALPACA_SECRET_KEY"

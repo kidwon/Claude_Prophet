@@ -17,16 +17,18 @@ type IntelligenceController struct {
 	analysisService      *services.TechnicalAnalysisService
 	stockAnalysisService *services.StockAnalysisService
 	dataService          interfaces.DataService
+	tradingService       interfaces.TradingService
 }
 
 // NewIntelligenceController creates a new intelligence controller
-func NewIntelligenceController(newsService *services.NewsService, geminiService *services.GeminiService, analysisService *services.TechnicalAnalysisService, stockAnalysisService *services.StockAnalysisService, dataService interfaces.DataService) *IntelligenceController {
+func NewIntelligenceController(newsService *services.NewsService, geminiService *services.GeminiService, analysisService *services.TechnicalAnalysisService, stockAnalysisService *services.StockAnalysisService, dataService interfaces.DataService, tradingService interfaces.TradingService) *IntelligenceController {
 	return &IntelligenceController{
 		newsService:          newsService,
 		geminiService:        geminiService,
 		analysisService:      analysisService,
 		stockAnalysisService: stockAnalysisService,
 		dataService:          dataService,
+		tradingService:       tradingService,
 	}
 }
 
@@ -125,21 +127,27 @@ func (ic *IntelligenceController) HandleGetCleanedNews(c *gin.Context) {
 // HandleGetQuickMarketIntelligence provides a quick market overview
 // GET /api/v1/intelligence/quick-market
 func (ic *IntelligenceController) HandleGetQuickMarketIntelligence(c *gin.Context) {
-	// Get latest from MarketWatch (fastest, most relevant)
 	allNews := make([]services.NewsItem, 0)
 
-	// Get top stories
+	// 1. Get current active positions to personalize intelligence
+	positions, err := ic.tradingService.ListOptionsPositions(context.Background())
+	if err == nil && len(positions) > 0 {
+		seenUnderlying := make(map[string]bool)
+		for _, pos := range positions {
+			if !seenUnderlying[pos.Underlying] {
+				seenUnderlying[pos.Underlying] = true
+				if posNews, err := ic.newsService.GetGoogleNewsSearch(pos.Underlying); err == nil {
+					allNews = append(allNews, posNews[:min(4, len(posNews))]...)
+				}
+			}
+		}
+	}
+
+	// 2. Get top stories and bulletins from MarketWatch
 	if news, err := ic.newsService.GetMarketWatchTopStories(); err == nil {
-		allNews = append(allNews, news[:min(5, len(news))]...)
+		allNews = append(allNews, news[:min(8, len(news))]...)
 	}
-
-	// Get bulletins
 	if news, err := ic.newsService.GetMarketWatchBulletins(); err == nil {
-		allNews = append(allNews, news[:min(5, len(news))]...)
-	}
-
-	// Get market pulse
-	if news, err := ic.newsService.GetMarketWatchMarketPulse(); err == nil {
 		allNews = append(allNews, news[:min(5, len(news))]...)
 	}
 
@@ -153,10 +161,21 @@ func (ic *IntelligenceController) HandleGetQuickMarketIntelligence(c *gin.Contex
 	// Clean the news
 	cleanedNews, err := ic.geminiService.CleanNewsForTrading(allNews)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to generate intelligence",
-			"details": err.Error(),
-		})
+		// Fallback to raw summary if AI cleaning fails
+		fallback := services.CleanedNews{
+			MarketSentiment:  "NEUTRAL",
+			KeyThemes:        []string{"市场分析降级模式 (AI 离线)"},
+			ExecutiveSummary: "无法生成 AI 总结。正在返回原始文章列表。",
+		}
+
+		// Add some raw themes if available
+		for _, item := range allNews {
+			if len(fallback.KeyThemes) < 5 {
+				fallback.KeyThemes = append(fallback.KeyThemes, item.Title)
+			}
+		}
+
+		c.JSON(http.StatusOK, fallback)
 		return
 	}
 

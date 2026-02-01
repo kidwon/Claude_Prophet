@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 )
 
@@ -254,7 +255,12 @@ func (s *LocalStorage) SavePosition(position *interfaces.Position) error {
 		SnapshotTime:   time.Now(),
 	}
 
-	result := s.db.Save(dbPosition)
+	// Use Claused Create with OnConflict to perform an upsert on Symbol
+	result := s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "symbol"}},
+		DoUpdates: clause.AssignmentColumns([]string{"qty", "avg_entry_price", "market_value", "cost_basis", "unrealized_pl", "unrealized_plpc", "current_price", "side", "snapshot_time"}),
+	}).Create(dbPosition)
+
 	if result.Error != nil {
 		return fmt.Errorf("failed to save position: %w", result.Error)
 	}
@@ -345,6 +351,25 @@ func (s *LocalStorage) DeleteManagedPosition(positionID string) error {
 		return fmt.Errorf("failed to delete managed position: %w", result.Error)
 	}
 	return nil
+}
+
+// SaveTrade saves an executed trade to the database
+func (s *LocalStorage) SaveTrade(trade *models.DBTrade) error {
+	result := s.db.Save(trade)
+	if result.Error != nil {
+		return fmt.Errorf("failed to save trade: %w", result.Error)
+	}
+	return nil
+}
+
+// GetAllTrades retrieves all historical trades
+func (s *LocalStorage) GetAllTrades() ([]*models.DBTrade, error) {
+	var dbTrades []*models.DBTrade
+	result := s.db.Order("exit_time DESC").Find(&dbTrades)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to get all trades: %w", result.Error)
+	}
+	return dbTrades, nil
 }
 
 // Close closes the database connection

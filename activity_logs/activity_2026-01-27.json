@@ -1,0 +1,41 @@
+{
+  "date": "2026-01-27",
+  "session_start": "2026-01-27T00:48:13.672662+09:00",
+  "session_end": "0001-01-01T00:00:00Z",
+  "summary": {
+    "total_trades": 0,
+    "positions_opened": 0,
+    "positions_closed": 0,
+    "winning_trades": 0,
+    "losing_trades": 0,
+    "total_pnl": 0,
+    "total_pnl_percent": 0,
+    "largest_win": 0,
+    "largest_loss": 0,
+    "starting_capital": 98649.56,
+    "ending_capital": 0,
+    "capital_deployed": 0,
+    "active_positions": 0,
+    "stocks_analyzed": 0,
+    "news_articles_read": 0,
+    "web_searches": 0
+  },
+  "activities": [
+    {
+      "timestamp": "2026-01-27T09:53:54.837075+09:00",
+      "type": "POSITION_CHECK",
+      "action": "End of Day Review - Market Closed",
+      "details": {
+        "meta_status": "winner",
+        "spy_scalp_status": "must_close_tomorrow",
+        "total_pl": -2385,
+        "tsla_status": "near_stop"
+      },
+      "reasoning": "Market closed at 4:00 PM. SPY scalp should have been closed by EOD per rules - need to close at tomorrow's open. TSLA at -10.64% near -15% stop. META winner at +4.96%. Total P/L -$2,385 (-2.4%). Will resume trading tomorrow at market open."
+    }
+  ],
+  "positions_opened": [],
+  "positions_closed": [],
+  "market_intelligence": [],
+  "decisions": []
+}

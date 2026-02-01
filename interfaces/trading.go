@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+	"prophet-trader/models"
 	"time"
 )
 
@@ -38,6 +39,8 @@ type StorageService interface {
 	SaveOrder(order *Order) error
 	GetOrder(orderID string) (*Order, error)
 	GetOrders(status string) ([]*Order, error)
+	SaveTrade(trade *models.DBTrade) error
+	GetAllTrades() ([]*models.DBTrade, error)
 	CleanupOldData(before time.Time) error
 }
 
@@ -54,20 +57,20 @@ type StrategyExecutor interface {
 
 // Common data structures used across interfaces
 type Order struct {
-	ID            string
-	Symbol        string
-	Qty           float64
-	Side          string // "buy" or "sell"
-	Type          string // "market", "limit", etc.
-	TimeInForce   string // "day", "gtc", etc.
-	LimitPrice    *float64
-	StopPrice     *float64
-	Status        string
-	FilledQty     float64
+	ID             string
+	Symbol         string
+	Qty            float64
+	Side           string // "buy" or "sell"
+	Type           string // "market", "limit", etc.
+	TimeInForce    string // "day", "gtc", etc.
+	LimitPrice     *float64
+	StopPrice      *float64
+	Status         string
+	FilledQty      float64
 	FilledAvgPrice *float64
-	SubmittedAt   time.Time
-	FilledAt      *time.Time
-	CanceledAt    *time.Time
+	SubmittedAt    time.Time
+	FilledAt       *time.Time
+	CanceledAt     *time.Time
 }
 
 type OrderRequest struct {
@@ -87,15 +90,15 @@ type OrderResult struct {
 }
 
 type Position struct {
-	Symbol           string
-	Qty              float64
-	AvgEntryPrice    float64
-	MarketValue      float64
-	CostBasis        float64
-	UnrealizedPL     float64
-	UnrealizedPLPC   float64
-	CurrentPrice     float64
-	Side             string
+	Symbol         string
+	Qty            float64
+	AvgEntryPrice  float64
+	MarketValue    float64
+	CostBasis      float64
+	UnrealizedPL   float64
+	UnrealizedPLPC float64
+	CurrentPrice   float64
+	Side           string
 }
 
 type Account struct {
@@ -135,24 +138,24 @@ type Trade struct {
 }
 
 type MarketData struct {
-	Symbol       string
-	CurrentBar   *Bar
-	RecentBars   []*Bar
-	LatestQuote  *Quote
-	LatestTrade  *Trade
-	Indicators   map[string]float64 // For calculated indicators
+	Symbol      string
+	CurrentBar  *Bar
+	RecentBars  []*Bar
+	LatestQuote *Quote
+	LatestTrade *Trade
+	Indicators  map[string]float64 // For calculated indicators
 }
 
 // Options trading structures
 type OptionsOrder struct {
-	Symbol        string  // Options symbol in OCC format (e.g., TSLA251219C00400000)
-	Underlying    string  // Underlying stock symbol
-	Qty           float64
-	Side          string // "buy" or "sell"
+	Symbol         string // Options symbol in OCC format (e.g., TSLA251219C00400000)
+	Underlying     string // Underlying stock symbol
+	Qty            float64
+	Side           string // "buy" or "sell"
 	PositionIntent string // "buy_to_open", "buy_to_close", "sell_to_open", "sell_to_close"
-	Type          string // "market", "limit"
-	TimeInForce   string // "day", "gtc"
-	LimitPrice    *float64
+	Type           string // "market", "limit"
+	TimeInForce    string // "day", "gtc"
+	LimitPrice     *float64
 }
 
 type OptionsQuote struct {
@@ -167,17 +170,17 @@ type OptionsQuote struct {
 }
 
 type OptionsPosition struct {
-	Symbol        string
-	Underlying    string
-	Qty           float64
-	AvgEntryPrice float64
-	MarketValue   float64
-	CostBasis     float64
-	UnrealizedPL  float64
+	Symbol         string
+	Underlying     string
+	Qty            float64
+	AvgEntryPrice  float64
+	MarketValue    float64
+	CostBasis      float64
+	UnrealizedPL   float64
 	UnrealizedPLPC float64
-	CurrentPrice  float64
-	Side          string // "long" or "short"
-	Expiration    time.Time
-	Strike        float64
-	OptionType    string // "call" or "put"
+	CurrentPrice   float64
+	Side           string // "long" or "short"
+	Expiration     time.Time
+	Strike         float64
+	OptionType     string // "call" or "put"
 }

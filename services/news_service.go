@@ -38,10 +38,10 @@ func (n *NewsItem) ToCompact() NewsItemCompact {
 
 // NewsChannel represents the RSS channel
 type NewsChannel struct {
-	Title       string      `xml:"title"`
-	Link        string      `xml:"link"`
-	Description string      `xml:"description"`
-	Items       []NewsItem  `xml:"item"`
+	Title       string     `xml:"title"`
+	Link        string     `xml:"link"`
+	Description string     `xml:"description"`
+	Items       []NewsItem `xml:"item"`
 }
 
 // RSSFeed represents the root RSS structure
@@ -73,7 +73,7 @@ func (ns *NewsService) GetGoogleNews() ([]NewsItem, error) {
 // GetGoogleNewsByTopic fetches news for a specific topic
 // Topics: WORLD, NATION, BUSINESS, TECHNOLOGY, ENTERTAINMENT, SPORTS, SCIENCE, HEALTH
 func (ns *NewsService) GetGoogleNewsByTopic(topic string) ([]NewsItem, error) {
-	url := fmt.Sprintf("https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en")
+	url := "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
 
 	// Topic-specific URLs
 	topicURLs := map[string]string{
@@ -226,8 +226,8 @@ func (ns *NewsService) FilterNewsByKeywords(items []NewsItem, keywords []string)
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr ||
 		len(s) > len(substr) && (s[:len(substr)] == substr ||
-		s[len(s)-len(substr):] == substr ||
-		findSubstring(s, substr)))
+			s[len(s)-len(substr):] == substr ||
+			findSubstring(s, substr)))
 }
 
 func findSubstring(s, substr string) bool {

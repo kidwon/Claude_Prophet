@@ -84,7 +84,7 @@ func main() {
 	geminiService := services.NewGeminiService(cfg.GeminiAPIKey)
 	analysisService := services.NewTechnicalAnalysisService(dataService)
 	stockAnalysisService := services.NewStockAnalysisService(dataService, newsService, geminiService)
-	intelligenceController := controllers.NewIntelligenceController(newsService, geminiService, analysisService, stockAnalysisService, dataService)
+	intelligenceController := controllers.NewIntelligenceController(newsService, geminiService, analysisService, stockAnalysisService, dataService, tradingService)
 
 	// Test account connection
 	logger.Info("Testing Alpaca connection...")
@@ -92,8 +92,8 @@ func main() {
 		logger.Fatal("Failed to connect to Alpaca:", err)
 	} else {
 		logger.WithFields(logrus.Fields{
-			"cash":           account.Cash,
-			"buying_power":   account.BuyingPower,
+			"cash":            account.Cash,
+			"buying_power":    account.BuyingPower,
 			"portfolio_value": account.PortfolioValue,
 		}).Info("Successfully connected to Alpaca")
 	}
@@ -102,13 +102,13 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Create position manager
-	positionManager := services.NewPositionManager(tradingService, dataService, storageService)
-	positionController := controllers.NewPositionManagementController(positionManager)
-
 	// Create activity logger
 	activityLogger := services.NewActivityLogger("./activity_logs")
 	activityController := controllers.NewActivityController(activityLogger)
+
+	// Create position manager
+	positionManager := services.NewPositionManager(tradingService, dataService, storageService, activityLogger)
+	positionController := controllers.NewPositionManagementController(positionManager)
 
 	// Start trading session automatically
 	if account, err := orderController.GetAccount(); err == nil {
@@ -175,6 +175,7 @@ func setupRouter(orderController *controllers.OrderController, newsController *c
 		api.POST("/orders/sell", orderController.HandleSell)
 		api.DELETE("/orders/:id", orderController.HandleCancelOrder)
 		api.GET("/orders", orderController.HandleGetOrders)
+		api.GET("/trades", orderController.HandleGetTrades)
 
 		// Position and account endpoints
 		api.GET("/positions", orderController.HandleGetPositions)

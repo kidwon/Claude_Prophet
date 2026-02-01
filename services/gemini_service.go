@@ -68,7 +68,7 @@ func NewGeminiService(apiKey string) *GeminiService {
 		httpClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
-		model: "gemini-2.0-flash-exp",
+		model: "gemini-2.5-flash",
 	}
 }
 
@@ -98,15 +98,15 @@ func (gs *GeminiService) CleanNewsForTrading(newsItems []NewsItem) (*CleanedNews
 NEWS ARTICLES:
 %s
 
-Provide a JSON response with this EXACT structure:
+Provide a JSON response with this EXACT structure (MUST respond in Simplified Chinese for all text fields):
 {
   "market_sentiment": "BULLISH|BEARISH|NEUTRAL",
-  "key_themes": ["theme1", "theme2", "theme3"],
+  "key_themes": ["主题1", "主题2", "主题3"],
   "stock_mentions": {
-    "SYMBOL": "POSITIVE|NEGATIVE|NEUTRAL with 1-sentence reason"
+    "SYMBOL": "POSITIVE|NEGATIVE|NEUTRAL: 1句话简要理由"
   },
-  "actionable_items": ["brief actionable insight 1", "brief actionable insight 2"],
-  "executive_summary": "2-3 sentence summary of the market situation"
+  "actionable_items": ["操作建议1", "操作建议2"],
+  "executive_summary": "2-3句市场情况总结"
 }
 
 Focus on:
@@ -115,7 +115,7 @@ Focus on:
 - Actionable trading insights
 - Overall market direction
 
-Keep it BRIEF and DENSE. Maximum 200 tokens total.`, len(newsItems), newsText.String())
+Keep it BRIEF and DENSE. Response must be in Simplified Chinese. Maximum 400 tokens total.`, len(newsItems), newsText.String())
 
 	// Call Gemini
 	response, err := gs.generateContent(prompt)
@@ -136,11 +136,11 @@ Keep it BRIEF and DENSE. Maximum 200 tokens total.`, len(newsItems), newsText.St
 	if jsonStart >= 0 && jsonEnd > jsonStart {
 		jsonStr := response[jsonStart : jsonEnd+1]
 		var parsed struct {
-			MarketSentiment string            `json:"market_sentiment"`
-			KeyThemes       []string          `json:"key_themes"`
-			StockMentions   map[string]string `json:"stock_mentions"`
-			ActionableItems []string          `json:"actionable_items"`
-			ExecutiveSummary string           `json:"executive_summary"`
+			MarketSentiment  string            `json:"market_sentiment"`
+			KeyThemes        []string          `json:"key_themes"`
+			StockMentions    map[string]string `json:"stock_mentions"`
+			ActionableItems  []string          `json:"actionable_items"`
+			ExecutiveSummary string            `json:"executive_summary"`
 		}
 		if err := json.Unmarshal([]byte(jsonStr), &parsed); err == nil {
 			cleanedNews.MarketSentiment = parsed.MarketSentiment
@@ -156,7 +156,7 @@ Keep it BRIEF and DENSE. Maximum 200 tokens total.`, len(newsItems), newsText.St
 
 // generateContent calls the Gemini API
 func (gs *GeminiService) generateContent(prompt string) (string, error) {
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/%s:generateContent?key=%s",
 		gs.model, gs.apiKey)
 
 	reqBody := GeminiRequest{
