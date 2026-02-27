@@ -10,30 +10,252 @@ import {
 const POLLING_FAST = 5000;
 const POLLING_SLOW = 30000;
 
-// Search Command Bar Component
-const CommandBar = ({ onSearch, isSearching }) => {
+const PINNED_KEYWORDS = ['NVDA', 'SPY', 'QQQ', 'TSLA', 'Federal Reserve', 'AI stocks', 'interest rates', 'earnings season'];
+
+const loadHistory = () => {
+  try { return JSON.parse(localStorage.getItem('ygg_search_history') || '[]'); }
+  catch { return []; }
+};
+
+const saveHistory = (history) => {
+  try { localStorage.setItem('ygg_search_history', JSON.stringify(history)); } catch {}
+};
+
+const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHistory }) => {
   const [query, setQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 60);
+  }, []);
+
+  const filteredHistory = query.trim()
+    ? searchHistory.filter(h => h.toLowerCase().includes(query.toLowerCase()) && h !== query)
+    : [];
+
+  const submit = (q) => {
+    const trimmed = (q ?? query).trim();
+    if (!trimmed || isSearching) return;
+    setShowDropdown(false);
+    onSearch(trimmed);
+    setQuery(trimmed);
+  };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && query.trim()) {
-      onSearch(query.trim());
-      setQuery('');
-    }
+    if (e.key === 'Enter') submit();
+    if (e.key === 'Escape') { if (query) setQuery(''); else onClose(); }
+  };
+
+  const resultContent = () => {
+    if (isSearching) return (
+      <div className="sm-loading">
+        <RefreshCw className="animate-spin" size={28} />
+        <span>正在分析...</span>
+      </div>
+    );
+    if (!searchResult) return null;
+
+    if (searchResult.type === 'analysis') return (
+      <div className="sm-result">
+        <div className="analysis-header">
+          <div className="analysis-title">
+            <h2>{searchResult.data.symbol} <span className="analysis-price">${searchResult.data.current_price?.toFixed(2) || '---'}</span></h2>
+            <div className="status-wrapper">
+              <span className={`online-indicator ${searchResult.data.technical?.trend === 'BULLISH' ? 'success' : 'danger'}`}></span>
+              <span>AI ANALYSIS REPORT</span>
+            </div>
+          </div>
+          <div className="analysis-score-badge">
+            <div className="score-val">{searchResult.data.trade_setup?.composite_score ?? '-'} / 10</div>
+            <div className="score-label">Confidence Score</div>
+          </div>
+        </div>
+        <div className="analysis-body" style={{ maxHeight: 'none', padding: '20px 24px' }}>
+          <div className="analysis-section">
+            <h4><Zap size={14} /> AI Summary</h4>
+            <p style={{ lineHeight: '1.6', fontSize: '0.9rem' }}>
+              {searchResult.data.trade_setup?.notes || "暂无 AI 分析摘要"}
+              {searchResult.data.news_summary && <><br /><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{searchResult.data.news_summary}</span></>}
+            </p>
+          </div>
+          <div className="analysis-section">
+            <h4><Target size={14} /> Key Levels</h4>
+            <div className="key-levels-grid">
+              <div className="level-card">
+                <span className="level-label">Support</span>
+                <div className="level-val" style={{ color: 'var(--success)' }}>${searchResult.data.technical?.support_level?.toFixed(2) || '---'}</div>
+              </div>
+              <div className="level-card">
+                <span className="level-label">Resistance</span>
+                <div className="level-val" style={{ color: 'var(--danger)' }}>${searchResult.data.technical?.resistance_level?.toFixed(2) || '---'}</div>
+              </div>
+            </div>
+          </div>
+          {searchResult.data.trade_setup?.recent_news?.length > 0 && (
+            <div className="analysis-section">
+              <h4><Brain size={14} /> Signals & News</h4>
+              <div className="themes-list">
+                {searchResult.data.trade_setup.recent_news.slice(0, 4).map((s, i) => <span key={i} className="theme-tag">{s}</span>)}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+
+    // topic result
+    const a = searchResult.data.analysis;
+    return (
+      <div className="sm-result">
+        <div className="analysis-header">
+          <div className="analysis-title">
+            <h2 style={{ textTransform: 'none', fontSize: '1.4rem' }}>{searchResult.query}</h2>
+            <div className="status-wrapper"><span className="online-indicator"></span><span>MACRO TREND ANALYSIS</span></div>
+          </div>
+          {a && (
+            <div className={`sentiment-badge ${a.market_sentiment?.toLowerCase()}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
+              {a.market_sentiment === 'BULLISH' ? '看多 BULLISH' : a.market_sentiment === 'BEARISH' ? '看空 BEARISH' : '中性 NEUTRAL'}
+            </div>
+          )}
+        </div>
+        <div className="analysis-body" style={{ maxHeight: 'none', padding: '20px 24px' }}>
+          {!a && searchResult.data.message && (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px' }}>⚠️ {searchResult.data.message}</p>
+          )}
+          {a && <>
+            <div className="analysis-section">
+              <h4><Zap size={14} /> AI Summary</h4>
+              <p style={{ lineHeight: '1.6', fontSize: '0.9rem' }}>{a.executive_summary || '暂无摘要'}</p>
+            </div>
+            {a.key_themes?.length > 0 && (
+              <div className="analysis-section">
+                <h4><Layers size={14} /> Key Themes</h4>
+                <div className="themes-list">{a.key_themes.map((t, i) => <span key={i} className="theme-tag">{t}</span>)}</div>
+              </div>
+            )}
+            {a.actionable_items?.length > 0 && (
+              <div className="analysis-section">
+                <h4><Target size={14} /> Actionable Ideas</h4>
+                <div className="action-list">{a.actionable_items.map((item, i) => <div key={i} className="action-item">{item}</div>)}</div>
+              </div>
+            )}
+          </>}
+          {searchResult.data.stock_targets?.length > 0 && (
+            <div className="analysis-section">
+              <h4><Target size={14} /> 相关股票 · 建议价位</h4>
+              <div className="stock-targets-grid">
+                {searchResult.data.stock_targets.map((st, i) => (
+                  <div key={i} className={`stock-target-card ${st.sentiment === 'POSITIVE' ? 'up' : st.sentiment === 'NEGATIVE' ? 'down' : ''}`}>
+                    <div className="st-header">
+                      <span className="st-symbol">{st.symbol}</span>
+                      <span className={`st-sentiment ${st.sentiment === 'POSITIVE' ? 'up' : st.sentiment === 'NEGATIVE' ? 'down' : ''}`}>
+                        {st.sentiment === 'POSITIVE' ? '看多' : st.sentiment === 'NEGATIVE' ? '看空' : '中性'}
+                      </span>
+                    </div>
+                    <div className="st-price-row">
+                      <div className="st-price-col">
+                        <span className="st-price-label">现价</span>
+                        <span className="st-price-val">${st.current_price.toFixed(2)}</span>
+                      </div>
+                      <div className="st-price-col">
+                        <span className="st-price-label">{st.sentiment === 'NEGATIVE' ? '止损' : '买入'}</span>
+                        <span className="st-price-val" style={{ color: 'var(--success)' }}>${st.buy_target.toFixed(2)}</span>
+                      </div>
+                      <div className="st-price-col">
+                        <span className="st-price-label">{st.sentiment === 'NEGATIVE' ? '目标' : '卖出'}</span>
+                        <span className="st-price-val" style={{ color: st.sentiment === 'NEGATIVE' ? 'var(--danger)' : 'var(--accent)' }}>${st.sell_target.toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <p className="st-reason">{st.reason.replace(/^(POSITIVE|NEGATIVE|NEUTRAL):\s*/i, '')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {searchResult.data.articles?.length > 0 && (
+            <div className="analysis-section">
+              <h4><Brain size={14} /> Source Articles</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {searchResult.data.articles.slice(0, 3).map((art, i) => (
+                  <div key={i} style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    <span style={{ color: 'var(--accent)', marginRight: '6px' }}>▸</span>
+                    {art.title}
+                    {art.source && <span style={{ opacity: 0.5, marginLeft: '6px' }}>— {art.source}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="command-bar-wrapper">
-      <input
-        type="text"
-        className="command-input"
-        placeholder="Ticker (e.g. NVDA) or Topic (e.g. Federal Reserve)..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={handleKeyDown}
-        disabled={isSearching}
-      />
-      <Search className="command-icon" size={16} />
-      <div className="command-shortcut">⌘K</div>
+    <div className="sm-overlay" onClick={onClose}>
+      <div className="sm-panel" onClick={e => e.stopPropagation()}>
+
+        {/* Search Input Row */}
+        <div className="sm-input-row">
+          <Search size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <div style={{ position: 'relative', flex: 1 }}>
+            <input
+              ref={inputRef}
+              className="sm-input"
+              placeholder="输入股票代码 (NVDA) 或关键词 (Federal Reserve)..."
+              value={query}
+              onChange={e => { setQuery(e.target.value); setShowDropdown(true); }}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setShowDropdown(true)}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+              disabled={isSearching}
+              autoComplete="off"
+            />
+            {showDropdown && filteredHistory.length > 0 && (
+              <div className="sm-dropdown">
+                {filteredHistory.map((h, i) => (
+                  <div key={i} className="sm-dropdown-item" onMouseDown={() => { setQuery(h); submit(h); }}>
+                    <Clock size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                    <span>{h}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {query && <button className="sm-clear-btn" onClick={() => setQuery('')}>✕</button>}
+          <button className="sm-search-btn" onClick={() => submit()} disabled={isSearching || !query.trim()}>
+            {isSearching ? <RefreshCw size={14} className="animate-spin" /> : '搜索'}
+          </button>
+          <button className="close-btn" onClick={onClose} style={{ flexShrink: 0 }}><X size={16} /></button>
+        </div>
+
+        {/* Quick Access Bar */}
+        <div className="sm-chips-bar">
+          <div className="sm-chips-row">
+            <span className="sm-chips-label">📌 常用</span>
+            {PINNED_KEYWORDS.map((kw, i) => (
+              <button key={i} className="sm-chip sm-chip-pinned" onClick={() => { setQuery(kw); submit(kw); }}>{kw}</button>
+            ))}
+          </div>
+          {searchHistory.length > 0 && (
+            <div className="sm-chips-row">
+              <span className="sm-chips-label">🕐 最近</span>
+              {searchHistory.slice(0, 6).map((h, i) => (
+                <button key={i} className="sm-chip sm-chip-recent" onClick={() => { setQuery(h); submit(h); }}>{h}</button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Result Area */}
+        {(isSearching || searchResult) && (
+          <div className="sm-result-area">
+            {resultContent()}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -128,34 +350,40 @@ function App() {
   const [showHistoryOverlay, setShowHistoryOverlay] = useState(false);
 
   // Search State
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [searchHistory, setSearchHistory] = useState(loadHistory);
   const [assetTab, setAssetTab] = useState('ALL'); // 'ALL', 'STOCK', 'OPTION'
   const [isIntelligenceLoading, setIsIntelligenceLoading] = useState(false);
   const [intelligenceLastUpdate, setIntelligenceLastUpdate] = useState(null);
 
-  // Command Bar Handler
+  const addToHistory = (query) => {
+    setSearchHistory(prev => {
+      const next = [query, ...prev.filter(q => q !== query)].slice(0, 8);
+      saveHistory(next);
+      return next;
+    });
+  };
+
   const handleSearch = async (query) => {
     const trimmed = query.trim();
     if (!trimmed) return;
 
+    addToHistory(trimmed);
     setIsSearching(true);
+    setSearchResult(null);
     try {
-      // Stock ticker: 1-5 uppercase letters only
       if (/^[A-Z]{1,5}$/.test(trimmed)) {
         const response = await fetch(`/api/v1/intelligence/analyze/${trimmed}`);
         if (!response.ok) throw new Error('Analysis failed');
         const data = await response.json();
         setSearchResult({ type: 'analysis', data });
-        setShowModal(true);
       } else {
-        // General keyword / topic trend analysis
         const response = await fetch(`/api/v1/intelligence/topic-analysis?q=${encodeURIComponent(trimmed)}`);
         if (!response.ok) throw new Error('Topic analysis failed');
         const data = await response.json();
         setSearchResult({ type: 'topic', data, query: trimmed });
-        setShowModal(true);
       }
     } catch (error) {
       console.error("Search failed:", error);
@@ -163,6 +391,13 @@ function App() {
       setIsSearching(false);
     }
   };
+
+  // Close search modal on Escape
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') setSearchModalOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
   const terminalRef = useRef(null);
 
   const fetchData = useCallback(async () => {
@@ -279,7 +514,11 @@ function App() {
         </div>
 
         <div className="header-center">
-          <CommandBar onSearch={handleSearch} isSearching={isSearching} />
+          <button className="search-trigger" onClick={() => { setSearchResult(null); setSearchModalOpen(true); }}>
+            <Search size={15} />
+            <span>Search ticker or topic...</span>
+            <kbd>⌘K</kbd>
+          </button>
         </div>
 
         <div className="header-right">
@@ -511,149 +750,15 @@ function App() {
         </div>
       </main>
 
-      {/* Analysis / Topic Modal */}
-      {showModal && searchResult && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="analysis-card glass-card">
-
-              {searchResult.type === 'analysis' ? (
-                /* ── Stock Analysis Modal ── */
-                <>
-                  <div className="analysis-header">
-                    <div className="analysis-title">
-                      <h2>{searchResult.data.symbol} <span className="analysis-price">${searchResult.data.current_price?.toFixed(2) || '---'}</span></h2>
-                      <div className="status-wrapper">
-                        <span className={`online-indicator ${searchResult.data.technical?.trend === 'BULLISH' ? 'success' : 'danger'}`}></span>
-                        <span>AI ANALYSIS REPORT</span>
-                      </div>
-                    </div>
-                    <div className="analysis-score-badge">
-                      <div className="score-val">{searchResult.data.trade_setup?.composite_score ?? '-'} / 10</div>
-                      <div className="score-label">Confidence Score</div>
-                    </div>
-                  </div>
-
-                  <div className="analysis-body">
-                    <div className="analysis-section">
-                      <h4><Zap size={14} /> AI Summary</h4>
-                      <p style={{ lineHeight: '1.6', fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                        {searchResult.data.trade_setup?.notes || "暂无 AI 分析摘要"}
-                        {searchResult.data.news_summary && (
-                          <>
-                            <br />
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{searchResult.data.news_summary}</span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="analysis-section">
-                      <h4><Target size={14} /> Key Levels</h4>
-                      <div className="key-levels-grid">
-                        <div className="level-card">
-                          <span className="level-label">Support</span>
-                          <div className="level-val" style={{ color: 'var(--success)' }}>
-                            ${searchResult.data.technical?.support_level ? searchResult.data.technical.support_level.toFixed(2) : '---'}
-                          </div>
-                        </div>
-                        <div className="level-card">
-                          <span className="level-label">Resistance</span>
-                          <div className="level-val" style={{ color: 'var(--danger)' }}>
-                            ${searchResult.data.technical?.resistance_level ? searchResult.data.technical.resistance_level.toFixed(2) : '---'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="analysis-section">
-                      <h4><Brain size={14} /> Signals & News</h4>
-                      <div className="themes-list">
-                        {searchResult.data.trade_setup?.recent_news?.slice(0, 3).map((signal, i) => (
-                          <span key={i} className="theme-tag">{signal}</span>
-                        ))}
-                        {(!searchResult.data.trade_setup?.recent_news || searchResult.data.trade_setup?.recent_news.length === 0) && (
-                          <span className="text-muted" style={{ fontSize: '0.8rem' }}>暂无重大利好/利空消息</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                /* ── Topic / Macro Trend Modal ── */
-                <>
-                  <div className="analysis-header">
-                    <div className="analysis-title">
-                      <h2 style={{ textTransform: 'none' }}>{searchResult.query}</h2>
-                      <div className="status-wrapper">
-                        <span className="online-indicator"></span>
-                        <span>MACRO TREND ANALYSIS</span>
-                      </div>
-                    </div>
-                    <div className={`sentiment-badge ${searchResult.data.analysis?.market_sentiment?.toLowerCase()}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
-                      {searchResult.data.analysis?.market_sentiment === 'BULLISH' ? '看多 BULLISH' :
-                        searchResult.data.analysis?.market_sentiment === 'BEARISH' ? '看空 BEARISH' : '中性 NEUTRAL'}
-                    </div>
-                  </div>
-
-                  <div className="analysis-body">
-                    {!searchResult.data.analysis && searchResult.data.message && (
-                      <div className="analysis-section">
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                          ⚠️ {searchResult.data.message}
-                        </p>
-                      </div>
-                    )}
-                    <div className="analysis-section">
-                      <h4><Zap size={14} /> AI Summary</h4>
-                      <p style={{ lineHeight: '1.6', fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                        {searchResult.data.analysis?.executive_summary || "暂无 AI 摘要"}
-                      </p>
-                    </div>
-
-                    {searchResult.data.analysis?.key_themes?.length > 0 && (
-                      <div className="analysis-section">
-                        <h4><Layers size={14} /> Key Themes</h4>
-                        <div className="themes-list">
-                          {searchResult.data.analysis.key_themes.map((theme, i) => (
-                            <span key={i} className="theme-tag">{theme}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {searchResult.data.analysis?.actionable_items?.length > 0 && (
-                      <div className="analysis-section">
-                        <h4><Target size={14} /> Actionable Ideas</h4>
-                        <div className="action-list">
-                          {searchResult.data.analysis.actionable_items.map((item, i) => (
-                            <div key={i} className="action-item">{item}</div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {searchResult.data.articles?.length > 0 && (
-                      <div className="analysis-section">
-                        <h4><Brain size={14} /> Source Articles</h4>
-                        <div className="themes-list" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
-                          {searchResult.data.articles.slice(0, 3).map((article, i) => (
-                            <div key={i} style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                              <span style={{ color: 'var(--accent)', marginRight: '6px' }}>▸</span>
-                              {article.title}
-                              {article.source && <span style={{ opacity: 0.5, marginLeft: '6px' }}>— {article.source}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-            </div>
-          </div>
-        </div>
+      {/* Unified Search Modal */}
+      {searchModalOpen && (
+        <SearchModal
+          onClose={() => setSearchModalOpen(false)}
+          onSearch={handleSearch}
+          isSearching={isSearching}
+          searchResult={searchResult}
+          searchHistory={searchHistory}
+        />
       )}
 
       {/* C. History Overlay */}

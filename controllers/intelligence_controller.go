@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"prophet-trader/interfaces"
 	"prophet-trader/services"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -305,11 +306,72 @@ func (ic *IntelligenceController) HandleTopicAnalysis(c *gin.Context) {
 		rawItems = append(rawItems, rawNewsItem{Title: item.Title, Source: item.Source})
 	}
 
+	// Enrich mentioned stocks with current price and buy/sell targets
+	type stockTarget struct {
+		Symbol       string  `json:"symbol"`
+		Sentiment    string  `json:"sentiment"`
+		Reason       string  `json:"reason"`
+		CurrentPrice float64 `json:"current_price"`
+		BuyTarget    float64 `json:"buy_target"`
+		SellTarget   float64 `json:"sell_target"`
+	}
+	stockTargets := make([]stockTarget, 0)
+
+	if cleanedNews != nil && len(cleanedNews.StockMentions) > 0 {
+		ctx, cancelFetch := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFetch()
+
+		count := 0
+		for symbol, detail := range cleanedNews.StockMentions {
+			if count >= 5 {
+				break
+			}
+			bar, err := ic.dataService.GetLatestBar(ctx, symbol)
+			if err != nil || bar == nil {
+				continue
+			}
+			price := bar.Close
+
+			// Parse sentiment prefix from detail string (e.g. "POSITIVE: reason...")
+			upperDetail := strings.ToUpper(detail)
+			sentiment := "NEUTRAL"
+			if strings.HasPrefix(upperDetail, "POSITIVE") {
+				sentiment = "POSITIVE"
+			} else if strings.HasPrefix(upperDetail, "NEGATIVE") {
+				sentiment = "NEGATIVE"
+			}
+
+			var buyTarget, sellTarget float64
+			switch sentiment {
+			case "POSITIVE":
+				buyTarget = price * 0.97   // enter on 3% pullback
+				sellTarget = price * 1.10  // 10% upside target
+			case "NEGATIVE":
+				buyTarget = price * 0.90   // downside support / stop level
+				sellTarget = price * 0.95  // short target / exit level
+			default:
+				buyTarget = price * 0.97
+				sellTarget = price * 1.05
+			}
+
+			stockTargets = append(stockTargets, stockTarget{
+				Symbol:       symbol,
+				Sentiment:    sentiment,
+				Reason:       detail,
+				CurrentPrice: price,
+				BuyTarget:    buyTarget,
+				SellTarget:   sellTarget,
+			})
+			count++
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"query":        q,
-		"analysis":     cleanedNews,
+		"query":         q,
+		"analysis":      cleanedNews,
 		"article_count": len(news),
-		"articles":     rawItems,
+		"articles":      rawItems,
+		"stock_targets": stockTargets,
 	})
 }
 
