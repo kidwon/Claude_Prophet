@@ -131,35 +131,40 @@ const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHisto
             <div className="topic-targets-label">
               <Target size={12} /> 相关标的 · 建议价位
             </div>
-            <div className="topic-targets-row">
+            <div className="tgt-table">
+              {/* header */}
+              <div className="tgt-row tgt-row-head">
+                <span>标的</span>
+                <span>情绪</span>
+                <span>现价</span>
+                <span>{targets[0]?.sentiment === 'NEGATIVE' ? '止损参考' : '建议买入'}</span>
+                <span></span>
+                <span>{targets[0]?.sentiment === 'NEGATIVE' ? '下行目标' : '止盈目标'}</span>
+                <span>空间</span>
+                <span className="tgt-col-reason">AI 分析</span>
+              </div>
               {targets.map((st, i) => {
                 const isBull = st.sentiment === 'POSITIVE';
                 const isBear = st.sentiment === 'NEGATIVE';
-                const upPct = ((st.sell_target - st.current_price) / st.current_price * 100).toFixed(1);
+                const pct = ((st.sell_target - st.current_price) / st.current_price * 100);
+                const pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
                 return (
-                  <div key={i} className={`tgt-card ${isBull ? 'bull' : isBear ? 'bear' : 'neutral'}`}>
-                    <div className="tgt-top">
-                      <span className="tgt-symbol">{st.symbol}</span>
-                      <span className={`tgt-badge ${isBull ? 'bull' : isBear ? 'bear' : 'neutral'}`}>
-                        {isBull ? '看多' : isBear ? '看空' : '中性'}
-                      </span>
-                    </div>
-                    <div className="tgt-now">${st.current_price.toFixed(2)}</div>
-                    <div className="tgt-prices">
-                      <div className="tgt-price-block">
-                        <span className="tgt-price-lbl">{isBear ? '止损' : '买入区间'}</span>
-                        <span className="tgt-price-num buy">${st.buy_target.toFixed(2)}</span>
-                      </div>
-                      <div className="tgt-arrow">{isBear ? '↓' : '↑'}</div>
-                      <div className="tgt-price-block">
-                        <span className="tgt-price-lbl">{isBear ? '目标' : '止盈区间'}</span>
-                        <span className={`tgt-price-num ${isBear ? 'sell-bear' : 'sell-bull'}`}>${st.sell_target.toFixed(2)}</span>
-                      </div>
-                      <div className={`tgt-pct ${isBear ? 'bear' : 'bull'}`}>
-                        {isBear ? '' : '+'}{upPct}%
-                      </div>
-                    </div>
-                    <p className="tgt-reason">{st.reason.replace(/^(POSITIVE|NEGATIVE|NEUTRAL):\s*/i, '')}</p>
+                  <div key={i} className={`tgt-row ${isBull ? 'bull' : isBear ? 'bear' : ''}`}>
+                    <span className="tgt-sym">{st.symbol}</span>
+                    <span className={`tgt-badge ${isBull ? 'bull' : isBear ? 'bear' : 'neutral'}`}>
+                      {isBull ? '看多' : isBear ? '看空' : '中性'}
+                    </span>
+                    <span className="tgt-mono">${st.current_price.toFixed(2)}</span>
+                    <span className="tgt-mono tgt-buy">${st.buy_target.toFixed(2)}</span>
+                    <span className="tgt-dir">{isBear ? '↓' : '↑'}</span>
+                    <span className={`tgt-mono ${isBear ? 'tgt-sell-bear' : 'tgt-sell-bull'}`}>${st.sell_target.toFixed(2)}</span>
+                    <span className={`tgt-pct ${isBear ? 'bear' : 'bull'}`}>{pctStr}</span>
+                    <span
+                      className="tgt-col-reason tgt-reason-text"
+                      title={st.reason.replace(/^(POSITIVE|NEGATIVE|NEUTRAL):\s*/i, '')}
+                    >
+                      {st.reason.replace(/^(POSITIVE|NEGATIVE|NEUTRAL):\s*/i, '')}
+                    </span>
                   </div>
                 );
               })}

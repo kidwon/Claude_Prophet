@@ -1340,48 +1340,44 @@ body {
   align-items: center;
   gap: 6px;
 }
-.topic-targets-row {
+/* ── Stock targets table ── */
+.tgt-table {
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  flex-direction: column;
+  gap: 2px;
 }
-.topic-targets-row::-webkit-scrollbar { height: 3px; }
 
-/* Individual target card */
-.tgt-card {
-  flex: 0 0 200px;
-  border-radius: 14px;
-  padding: 14px 16px;
-  border: 1px solid var(--border-glass);
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.tgt-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0.06;
-  pointer-events: none;
-}
-.tgt-card.bull { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.25); }
-.tgt-card.bull::before { background: linear-gradient(135deg, var(--success), transparent); }
-.tgt-card.bear { background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.25); }
-.tgt-card.bear::before { background: linear-gradient(135deg, var(--danger), transparent); }
-.tgt-card.neutral { background: rgba(148,163,184,0.04); }
-.tgt-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-
-.tgt-top {
-  display: flex;
-  justify-content: space-between;
+.tgt-row {
+  display: grid;
+  grid-template-columns: 56px 52px 88px 96px 20px 96px 60px 1fr;
   align-items: center;
-  margin-bottom: 6px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background 0.15s;
 }
-.tgt-symbol {
+.tgt-row:hover { background: rgba(255,255,255,0.03); }
+.tgt-row.bull { border-left: 3px solid var(--success); }
+.tgt-row.bear { border-left: 3px solid var(--danger); }
+.tgt-row:not(.bull):not(.bear):not(.tgt-row-head) { border-left: 3px solid var(--border-glass); }
+
+.tgt-row-head {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-glass);
+  margin-bottom: 2px;
+  border-left: none !important;
+}
+.tgt-row-head:hover { background: transparent; }
+
+.tgt-sym {
   font-family: var(--font-mono);
   font-weight: 900;
-  font-size: 1.15rem;
+  font-size: 1rem;
   letter-spacing: -0.02em;
 }
 .tgt-badge {
@@ -1390,74 +1386,48 @@ body {
   padding: 2px 7px;
   border-radius: 8px;
   border: 1px solid;
+  text-align: center;
 }
 .tgt-badge.bull { color: var(--success); border-color: var(--success); background: var(--success-glow); }
 .tgt-badge.bear { color: var(--danger); border-color: var(--danger); background: var(--danger-glow); }
 .tgt-badge.neutral { color: var(--text-muted); border-color: var(--border-glass); }
 
-.tgt-now {
+.tgt-mono {
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--text-muted);
-  margin-bottom: 10px;
 }
+.tgt-buy  { color: var(--success) !important; font-weight: 700; }
+.tgt-sell-bull { color: var(--accent) !important; font-weight: 700; }
+.tgt-sell-bear { color: var(--danger) !important; font-weight: 700; }
 
-.tgt-prices {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.tgt-price-block {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-.tgt-price-lbl {
-  font-size: 0.58rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.tgt-price-num {
-  font-family: var(--font-mono);
-  font-weight: 800;
+.tgt-dir {
   font-size: 1rem;
-}
-.tgt-price-num.buy { color: var(--success); }
-.tgt-price-num.sell-bull { color: var(--accent); }
-.tgt-price-num.sell-bear { color: var(--danger); }
-
-.tgt-arrow {
-  font-size: 1.1rem;
   color: var(--text-muted);
-  opacity: 0.5;
-  flex-shrink: 0;
+  opacity: 0.4;
+  text-align: center;
 }
 .tgt-pct {
   font-family: var(--font-mono);
   font-weight: 800;
   font-size: 0.85rem;
   text-align: right;
-  min-width: 44px;
-  flex-shrink: 0;
 }
 .tgt-pct.bull { color: var(--success); }
 .tgt-pct.bear { color: var(--danger); }
 
-.tgt-reason {
-  font-size: 0.7rem;
+.tgt-col-reason { min-width: 0; position: relative; }
+.tgt-reason-text {
+  font-size: 0.75rem;
   color: var(--text-muted);
   line-height: 1.4;
-  border-top: 1px solid var(--border-glass);
-  padding-top: 8px;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
 }
+
 
 /* ── Topic body two-column layout ── */
 .topic-body {
