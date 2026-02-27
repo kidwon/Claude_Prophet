@@ -4,11 +4,39 @@ import {
 } from 'recharts';
 import {
   TrendingUp, Activity, RefreshCw, Layers, Cpu, Shield, BrainCircuit, Terminal, Clock, Percent,
-  History, BarChart3, PieChart, X, List
+  History, BarChart3, PieChart, X, List, Search, Command, Zap, Target, Brain
 } from 'lucide-react';
 
 const POLLING_FAST = 5000;
 const POLLING_SLOW = 30000;
+
+// Search Command Bar Component
+const CommandBar = ({ onSearch, isSearching }) => {
+  const [query, setQuery] = useState('');
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && query.trim()) {
+      onSearch(query.trim());
+      setQuery('');
+    }
+  };
+
+  return (
+    <div className="command-bar-wrapper">
+      <input
+        type="text"
+        className="command-input"
+        placeholder="Ticker (e.g. NVDA) or Topic (e.g. Federal Reserve)..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
+        disabled={isSearching}
+      />
+      <Search className="command-icon" size={16} />
+      <div className="command-shortcut">⌘K</div>
+    </div>
+  );
+};
 
 const Typewriter = ({ text, speed = 30 }) => {
   const [displayedText, setDisplayedText] = useState('');
@@ -29,7 +57,7 @@ const parseOptionSymbol = (symbol) => {
   // Typical OCC format: TSLA260320C00440000
   // Symbol: TSLA, YYMMDD: 260320, Type: C/P, Strike: 00440000
   const match = symbol.match(/^([A-Z]+)(\d{6})([CP])(\d+)$/);
-  if (!match) return { ticker: symbol, expiry: '', type: '', strike: '' };
+  if (!match) return { ticker: symbol, expiry: 'LONG TERM', type: '现货 (STOCK)', strike: '持股' };
 
   const [_, ticker, dateStr, type, strikeStr] = match;
   const year = '20' + dateStr.substring(0, 2);
@@ -98,15 +126,52 @@ function App() {
   const [theme, setTheme] = useState('modern');
   const [consoleTab, setConsoleTab] = useState('SYSTEM');
   const [showHistoryOverlay, setShowHistoryOverlay] = useState(false);
+
+  // Search State
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [assetTab, setAssetTab] = useState('ALL'); // 'ALL', 'STOCK', 'OPTION'
+  const [isIntelligenceLoading, setIsIntelligenceLoading] = useState(false);
+  const [intelligenceLastUpdate, setIntelligenceLastUpdate] = useState(null);
+
+  // Command Bar Handler
+  const handleSearch = async (query) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    setIsSearching(true);
+    try {
+      // Stock ticker: 1-5 uppercase letters only
+      if (/^[A-Z]{1,5}$/.test(trimmed)) {
+        const response = await fetch(`/api/v1/intelligence/analyze/${trimmed}`);
+        if (!response.ok) throw new Error('Analysis failed');
+        const data = await response.json();
+        setSearchResult({ type: 'analysis', data });
+        setShowModal(true);
+      } else {
+        // General keyword / topic trend analysis
+        const response = await fetch(`/api/v1/intelligence/topic-analysis?q=${encodeURIComponent(trimmed)}`);
+        if (!response.ok) throw new Error('Topic analysis failed');
+        const data = await response.json();
+        setSearchResult({ type: 'topic', data, query: trimmed });
+        setShowModal(true);
+      }
+    } catch (error) {
+      console.error("Search failed:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
   const terminalRef = useRef(null);
 
   const fetchData = useCallback(async () => {
     try {
       const [accRes, posRes, actRes, tradeRes] = await Promise.all([
         fetch('/api/v1/account'),
-        fetch('/api/v1/options/positions'),
+        fetch('/api/v1/positions'),
         fetch('/api/v1/activity/current'),
-        fetch('/api/v1/trades')
+        fetch('/api/v1/orders?status=filled')
       ]);
 
       const accData = await accRes.json();
@@ -135,12 +200,16 @@ function App() {
   }, []);
 
   const fetchIntelligence = useCallback(async () => {
+    setIsIntelligenceLoading(true);
     try {
       const res = await fetch('/api/v1/intelligence/quick-market');
       const data = await res.json();
       setIntelligence(data);
+      setIntelligenceLastUpdate(new Date());
     } catch (error) {
       console.error('Failed to fetch intelligence:', error);
+    } finally {
+      setIsIntelligenceLoading(false);
     }
   }, []);
 
@@ -210,7 +279,7 @@ function App() {
         </div>
 
         <div className="header-center">
-          <AnimatedNumber value={account?.PortfolioValue} />
+          <CommandBar onSearch={handleSearch} isSearching={isSearching} />
         </div>
 
         <div className="header-right">
@@ -285,37 +354,52 @@ function App() {
           {/* Positions */}
           <section className="section-card positions-container glass-card">
             <div className="section-title">
-              <h3><Shield size={16} /> 活跃期权持仓</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h3><Shield size={16} /> 活跃资产持仓</h3>
+                <div className="console-tabs" style={{ marginLeft: '12px' }}>
+                  <button className={`tab-btn ${assetTab === 'ALL' ? 'active' : ''}`} onClick={() => setAssetTab('ALL')}>全部</button>
+                  <button className={`tab-btn ${assetTab === 'STOCK' ? 'active' : ''}`} onClick={() => setAssetTab('STOCK')}>现货</button>
+                  <button className={`tab-btn ${assetTab === 'OPTION' ? 'active' : ''}`} onClick={() => setAssetTab('OPTION')}>期权</button>
+                </div>
+              </div>
               <span className="badge">{positions.length} 仓位</span>
             </div>
             <div className="positions-grid">
-              {positions.map((pos) => {
-                const info = parseOptionSymbol(pos.Symbol);
-                const isProfit = pos.UnrealizedPL >= 0;
-                return (
-                  <div key={pos.Symbol} className={`pos-card glass-card ${isProfit ? 'up' : 'down'}`}>
-                    <div className="pos-header">
-                      <div className="pos-main-info">
-                        <span className="pos-ticker">{info.ticker}</span>
-                        <span className="pos-details">{info.type} · {info.strike}</span>
+              {positions
+                .filter(pos => {
+                  if (assetTab === 'ALL') return true;
+                  const isOption = /^[A-Z]+\d{6}[CP]\d+$/.test(pos.Symbol);
+                  if (assetTab === 'OPTION') return isOption;
+                  if (assetTab === 'STOCK') return !isOption;
+                  return true;
+                })
+                .map((pos) => {
+                  const info = parseOptionSymbol(pos.Symbol);
+                  const isProfit = pos.UnrealizedPL >= 0;
+                  return (
+                    <div key={pos.Symbol} className={`pos-card glass-card ${isProfit ? 'up' : 'down'}`}>
+                      <div className="pos-header">
+                        <div className="pos-main-info">
+                          <span className="pos-ticker">{info.ticker}</span>
+                          <span className="pos-details">{info.type} · {info.strike}</span>
+                        </div>
+                        <div className="pos-badge">qty: {pos.Qty}</div>
                       </div>
-                      <div className="pos-badge">qty: {pos.Qty}</div>
-                    </div>
 
-                    <div className={`pos-expiry ${isProfit ? 'up' : 'down'}`}>{info.expiry}</div>
+                      <div className={`pos-expiry ${isProfit ? 'up' : 'down'}`}>{info.expiry}</div>
 
-                    <div className="pos-stats">
-                      <div className={`pos-pnl-pct ${isProfit ? 'up' : 'down'}`}>
-                        {isProfit ? '+' : ''}{(pos.UnrealizedPLPC * 100).toFixed(1)}%
-                      </div>
-                      <div className="pos-pnl-val">
-                        ${Math.abs(pos.UnrealizedPL).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        <span className="profit-indicator">{isProfit ? '↑' : '↓'}</span>
+                      <div className="pos-stats">
+                        <div className={`pos-pnl-pct ${isProfit ? 'up' : 'down'}`}>
+                          {isProfit ? '+' : ''}{(pos.UnrealizedPLPC * 100).toFixed(1)}%
+                        </div>
+                        <div className="pos-pnl-val">
+                          ${Math.abs(pos.UnrealizedPL).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          <span className="profit-indicator">{isProfit ? '↑' : '↓'}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </section>
         </div>
@@ -323,20 +407,41 @@ function App() {
         <div className="right-panel">
           {/* AI Intelligence */}
           <section className="section-card ai-feed glass-card">
-            <div className="section-title">
-              <h3><BrainCircuit size={16} /> YGG 市场情报</h3>
+            <div className="section-title" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3><BrainCircuit size={16} /> YGG 市场情报</h3>
+                {isIntelligenceLoading && <RefreshCw size={14} className="animate-spin text-muted" />}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="text-muted" style={{ fontSize: '10px' }}>
+                  {intelligenceLastUpdate ? intelligenceLastUpdate.toLocaleTimeString() : '--:--'}
+                </span>
+                <button
+                  onClick={fetchIntelligence}
+                  className="icon-btn"
+                  disabled={isIntelligenceLoading}
+                  style={{ opacity: isIntelligenceLoading ? 0.5 : 1 }}
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
             </div>
-            <div className="feed-content">
-              {intelligence ? (
-                <>
+            <div className="feed-content" style={{ position: 'relative', minHeight: '200px' }}>
+              {isIntelligenceLoading && !intelligence && (
+                <div className="loading-intelligence">
+                  <RefreshCw className="animate-spin" size={24} />
+                  <p>正在合成全球市场数据...</p>
+                </div>
+              )}
+
+              {intelligence && (
+                <div style={{ opacity: isIntelligenceLoading ? 0.5 : 1, transition: 'opacity 0.3s' }}>
                   <div className="intelligence-top">
                     <div className={`sentiment-badge ${intelligence.market_sentiment?.toLowerCase()}`}>
                       {intelligence.market_sentiment === 'BULLISH' ? '看多情绪' :
                         intelligence.market_sentiment === 'BEARISH' ? '看空情绪' : '中性情绪'}
                     </div>
                   </div>
-
-
 
                   {intelligence.actionable_items?.length > 0 && (
                     <div className="ai-section">
@@ -357,11 +462,6 @@ function App() {
                       ))}
                     </div>
                   </div>
-                </>
-              ) : (
-                <div className="loading-intelligence">
-                  <RefreshCw className="animate-spin" size={24} />
-                  <p>正在合成全球市场数据...</p>
                 </div>
               )}
             </div>
@@ -397,9 +497,9 @@ function App() {
                 <div className="compact-trades">
                   {trades.slice(0, 10).map((t, i) => (
                     <div key={i} className="log-entry">
-                      <span className="log-time">[{new Date(t.ExitTime).toLocaleDateString()}]</span>
-                      <span className={`log-msg ${t.PnL >= 0 ? 'up' : 'down'}`}>
-                        {t.Symbol} · {t.PnL >= 0 ? '+' : ''}${t.PnL.toFixed(2)} ({t.PnLPercent.toFixed(1)}%)
+                      <span className="log-time">[{new Date(t.FilledAt).toLocaleTimeString([], { hour12: false })}]</span>
+                      <span className={`log-msg ${t.Side === 'buy' ? 'up' : 'down'}`}>
+                        {t.Symbol} · {t.Side.toUpperCase()} · {t.FilledQty} @ ${t.FilledAvgPrice.toFixed(2)}
                       </span>
                     </div>
                   ))}
@@ -411,86 +511,219 @@ function App() {
         </div>
       </main>
 
-      {/* C. History Overlay */}
-      {showHistoryOverlay && (
-        <div className="history-overlay">
-          <div className="overlay-content">
-            <div className="overlay-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className="logo-icon"><History size={20} /></div>
-                <h2>交易账户复盘中心</h2>
-              </div>
-              <button className="close-btn" onClick={() => setShowHistoryOverlay(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <div className="overlay-body">
-              <div className="stats-summary">
-                <div className="stat-card">
-                  <span className="label">胜率 (Win Rate)</span>
-                  <div className="val">
-                    {trades.length > 0 ? ((trades.filter(t => t.PnL > 0).length / trades.length) * 100).toFixed(1) : 0}%
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <span className="label">已实现盈亏 (Realized)</span>
-                  <div className={`val ${trades.reduce((acc, t) => acc + t.PnL, 0) >= 0 ? 'up' : 'down'}`}>
-                    ${trades.reduce((acc, t) => acc + t.PnL, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <span className="label">平均盈利 (Avg Win)</span>
-                  <div className="val up">
-                    ${trades.filter(t => t.PnL > 0).length > 0
-                      ? (trades.filter(t => t.PnL > 0).reduce((acc, t) => acc + t.PnL, 0) / trades.filter(t => t.PnL > 0).length).toFixed(2)
-                      : '0.00'}
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <span className="label">总成交数 (Total Trades)</span>
-                  <div className="val">{trades.length}</div>
-                </div>
-              </div>
+      {/* Analysis / Topic Modal */}
+      {showModal && searchResult && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="analysis-card glass-card">
 
-              <div className="history-list">
-                <h3><List size={16} /> 成交流水</h3>
-                <table className="history-table">
-                  <thead>
-                    <tr>
-                      <th>时间</th>
-                      <th>代码</th>
-                      <th>方向</th>
-                      <th>进价</th>
-                      <th>出价</th>
-                      <th>盈亏 $</th>
-                      <th>收益率 %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trades.map((t, i) => (
-                      <tr key={i}>
-                        <td>{new Date(t.ExitTime).toLocaleString()}</td>
-                        <td style={{ fontWeight: 800 }}>{t.Symbol}</td>
-                        <td>{t.Side?.toUpperCase()}</td>
-                        <td>${t.EntryPrice.toFixed(2)}</td>
-                        <td>${t.ExitPrice.toFixed(2)}</td>
-                        <td className={t.PnL >= 0 ? 'up' : 'down'}>
-                          {t.PnL >= 0 ? '+' : ''}${t.PnL.toFixed(2)}
-                        </td>
-                        <td className={t.PnL >= 0 ? 'up' : 'down'}>
-                          {t.PnLPercent.toFixed(2)}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {searchResult.type === 'analysis' ? (
+                /* ── Stock Analysis Modal ── */
+                <>
+                  <div className="analysis-header">
+                    <div className="analysis-title">
+                      <h2>{searchResult.data.symbol} <span className="analysis-price">${searchResult.data.current_price?.toFixed(2) || '---'}</span></h2>
+                      <div className="status-wrapper">
+                        <span className={`online-indicator ${searchResult.data.technical?.trend === 'BULLISH' ? 'success' : 'danger'}`}></span>
+                        <span>AI ANALYSIS REPORT</span>
+                      </div>
+                    </div>
+                    <div className="analysis-score-badge">
+                      <div className="score-val">{searchResult.data.trade_setup?.composite_score ?? '-'} / 10</div>
+                      <div className="score-label">Confidence Score</div>
+                    </div>
+                  </div>
+
+                  <div className="analysis-body">
+                    <div className="analysis-section">
+                      <h4><Zap size={14} /> AI Summary</h4>
+                      <p style={{ lineHeight: '1.6', fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                        {searchResult.data.trade_setup?.notes || "暂无 AI 分析摘要"}
+                        {searchResult.data.news_summary && (
+                          <>
+                            <br />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{searchResult.data.news_summary}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="analysis-section">
+                      <h4><Target size={14} /> Key Levels</h4>
+                      <div className="key-levels-grid">
+                        <div className="level-card">
+                          <span className="level-label">Support</span>
+                          <div className="level-val" style={{ color: 'var(--success)' }}>
+                            ${searchResult.data.technical?.support_level ? searchResult.data.technical.support_level.toFixed(2) : '---'}
+                          </div>
+                        </div>
+                        <div className="level-card">
+                          <span className="level-label">Resistance</span>
+                          <div className="level-val" style={{ color: 'var(--danger)' }}>
+                            ${searchResult.data.technical?.resistance_level ? searchResult.data.technical.resistance_level.toFixed(2) : '---'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="analysis-section">
+                      <h4><Brain size={14} /> Signals & News</h4>
+                      <div className="themes-list">
+                        {searchResult.data.trade_setup?.recent_news?.slice(0, 3).map((signal, i) => (
+                          <span key={i} className="theme-tag">{signal}</span>
+                        ))}
+                        {(!searchResult.data.trade_setup?.recent_news || searchResult.data.trade_setup?.recent_news.length === 0) && (
+                          <span className="text-muted" style={{ fontSize: '0.8rem' }}>暂无重大利好/利空消息</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* ── Topic / Macro Trend Modal ── */
+                <>
+                  <div className="analysis-header">
+                    <div className="analysis-title">
+                      <h2 style={{ textTransform: 'none' }}>{searchResult.query}</h2>
+                      <div className="status-wrapper">
+                        <span className="online-indicator"></span>
+                        <span>MACRO TREND ANALYSIS</span>
+                      </div>
+                    </div>
+                    <div className={`sentiment-badge ${searchResult.data.analysis?.market_sentiment?.toLowerCase()}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
+                      {searchResult.data.analysis?.market_sentiment === 'BULLISH' ? '看多 BULLISH' :
+                        searchResult.data.analysis?.market_sentiment === 'BEARISH' ? '看空 BEARISH' : '中性 NEUTRAL'}
+                    </div>
+                  </div>
+
+                  <div className="analysis-body">
+                    {!searchResult.data.analysis && searchResult.data.message && (
+                      <div className="analysis-section">
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                          ⚠️ {searchResult.data.message}
+                        </p>
+                      </div>
+                    )}
+                    <div className="analysis-section">
+                      <h4><Zap size={14} /> AI Summary</h4>
+                      <p style={{ lineHeight: '1.6', fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                        {searchResult.data.analysis?.executive_summary || "暂无 AI 摘要"}
+                      </p>
+                    </div>
+
+                    {searchResult.data.analysis?.key_themes?.length > 0 && (
+                      <div className="analysis-section">
+                        <h4><Layers size={14} /> Key Themes</h4>
+                        <div className="themes-list">
+                          {searchResult.data.analysis.key_themes.map((theme, i) => (
+                            <span key={i} className="theme-tag">{theme}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {searchResult.data.analysis?.actionable_items?.length > 0 && (
+                      <div className="analysis-section">
+                        <h4><Target size={14} /> Actionable Ideas</h4>
+                        <div className="action-list">
+                          {searchResult.data.analysis.actionable_items.map((item, i) => (
+                            <div key={i} className="action-item">{item}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {searchResult.data.articles?.length > 0 && (
+                      <div className="analysis-section">
+                        <h4><Brain size={14} /> Source Articles</h4>
+                        <div className="themes-list" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+                          {searchResult.data.articles.slice(0, 3).map((article, i) => (
+                            <div key={i} style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                              <span style={{ color: 'var(--accent)', marginRight: '6px' }}>▸</span>
+                              {article.title}
+                              {article.source && <span style={{ opacity: 0.5, marginLeft: '6px' }}>— {article.source}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
             </div>
           </div>
         </div>
       )}
+
+      {/* C. History Overlay */}
+      {
+        showHistoryOverlay && (
+          <div className="history-overlay">
+            <div className="overlay-content">
+              <div className="overlay-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="logo-icon"><History size={20} /></div>
+                  <h2>交易账户复盘中心</h2>
+                </div>
+                <button className="close-btn" onClick={() => setShowHistoryOverlay(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="overlay-body">
+                <div className="stats-summary">
+                  <div className="stat-card">
+                    <span className="label">胜率 (Win Rate)</span>
+                    <div className="val">
+                      <div className="val">
+                        {trades.length > 0 ? ((trades.filter(t => t.Status === 'filled').length / trades.length) * 100).toFixed(1) : 0}%
+                      </div>
+                    </div>
+                  </div>
+                  <div className="stat-card">
+                    <span className="label">总成交订单 (Total Orders)</span>
+                    <div className="val">{trades.length}</div>
+                  </div>
+                  <div className="stat-card">
+                    <span className="label">最近成交时间</span>
+                    <div className="val">{trades.length > 0 ? new Date(trades[0].FilledAt).toLocaleTimeString() : '--:--'}</div>
+                  </div>
+
+                  <div className="history-list">
+                    <h3><List size={16} /> 历史订单 (Order History)</h3>
+                    <table className="history-table">
+                      <thead>
+                        <tr>
+                          <th>时间</th>
+                          <th>代码</th>
+                          <th>方向</th>
+                          <th>数量</th>
+                          <th>成交价</th>
+                          <th>金额</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {trades.map((t, i) => (
+                          <tr key={i}>
+                            <td>{new Date(t.FilledAt).toLocaleString()}</td>
+                            <td style={{ fontWeight: 800 }}>{t.Symbol}</td>
+                            <td className={t.Side === 'buy' ? 'up' : 'down'}>{t.Side.toUpperCase()}</td>
+                            <td>{t.FilledQty}</td>
+                            <td>${t.FilledAvgPrice.toFixed(2)}</td>
+                            <td>${(t.FilledQty * t.FilledAvgPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
     </div>
   );
-}
+};
 
 export default App;

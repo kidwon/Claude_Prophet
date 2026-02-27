@@ -16,6 +16,7 @@ bakes/
 prophet-trader-bot
 prophet-trader
 prophet-bot
+prophet_bot
 main
 
 # Archives
@@ -34,3 +35,14 @@ data/*.db-*
 
 # Node
 node_modules/
+
+# Dashboard build output
+web/assets/
+dashboard/dist/
+
+# Activity & decision logs
+activity_logs/
+decisive_actions/
+
+# Planning docs
+trend_analysis_plan.md

@@ -52,6 +52,7 @@ func (s *AlpacaDataService) GetHistoricalBars(ctx context.Context, symbol string
 		End:        end,
 		PageLimit:  10000, // Max allowed
 		Adjustment: marketdata.All,
+		Feed:       "iex", // Force IEX for free plan compatibility
 	}
 
 	barsResp, err := s.client.GetBars(symbol, req)

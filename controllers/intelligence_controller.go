@@ -252,6 +252,67 @@ func (ic *IntelligenceController) HandleAnalyzeMultipleStocks(c *gin.Context) {
 	})
 }
 
+// HandleTopicAnalysis provides AI-powered trend analysis for a general keyword or topic
+// GET /api/v1/intelligence/topic-analysis?q=Federal+Reserve
+func (ic *IntelligenceController) HandleTopicAnalysis(c *gin.Context) {
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "query parameter 'q' is required",
+		})
+		return
+	}
+
+	news, err := ic.newsService.GetGoogleNewsSearch(q)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to fetch news",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	if len(news) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"query":         q,
+			"analysis":      nil,
+			"article_count": 0,
+			"articles":      []interface{}{},
+			"message":       "未找到相关新闻，请尝试英文关键词（如 'Cloudflare stock'）",
+		})
+		return
+	}
+
+	limit := min(len(news), 15)
+	news = news[:limit]
+
+	cleanedNews, err := ic.geminiService.CleanNewsForTrading(news)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to analyze news",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Build a lightweight raw news list for the frontend to show as citations
+	type rawNewsItem struct {
+		Title  string `json:"title"`
+		Source string `json:"source"`
+	}
+	rawItems := make([]rawNewsItem, 0, len(news))
+	for _, item := range news {
+		rawItems = append(rawItems, rawNewsItem{Title: item.Title, Source: item.Source})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"query":        q,
+		"analysis":     cleanedNews,
+		"article_count": len(news),
+		"articles":     rawItems,
+	})
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a

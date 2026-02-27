@@ -210,6 +210,7 @@ func setupRouter(orderController *controllers.OrderController, newsController *c
 		api.GET("/intelligence/quick-market", intelligenceController.HandleGetQuickMarketIntelligence)
 		api.GET("/intelligence/analyze/:symbol", intelligenceController.HandleAnalyzeStock)
 		api.POST("/intelligence/analyze-multiple", intelligenceController.HandleAnalyzeMultipleStocks)
+		api.GET("/intelligence/topic-analysis", intelligenceController.HandleTopicAnalysis)
 
 		// Position management endpoints
 		api.POST("/positions/managed", positionController.HandlePlaceManagedPosition)
