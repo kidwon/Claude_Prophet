@@ -106,89 +106,113 @@ const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHisto
 
     // topic result
     const a = searchResult.data.analysis;
+    const targets = searchResult.data.stock_targets || [];
     return (
       <div className="sm-result">
-        <div className="analysis-header">
-          <div className="analysis-title">
-            <h2 style={{ textTransform: 'none', fontSize: '1.4rem' }}>{searchResult.query}</h2>
-            <div className="status-wrapper"><span className="online-indicator"></span><span>MACRO TREND ANALYSIS</span></div>
+
+        {/* ── Header: keyword + sentiment ── */}
+        <div className="topic-header">
+          <div>
+            <div className="topic-label">MACRO TREND ANALYSIS</div>
+            <h2 className="topic-title">{searchResult.query}</h2>
           </div>
           {a && (
-            <div className={`sentiment-badge ${a.market_sentiment?.toLowerCase()}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
-              {a.market_sentiment === 'BULLISH' ? '看多 BULLISH' : a.market_sentiment === 'BEARISH' ? '看空 BEARISH' : '中性 NEUTRAL'}
+            <div className={`sentiment-badge ${a.market_sentiment?.toLowerCase()}`}>
+              {a.market_sentiment === 'BULLISH' ? '📈 看多 BULLISH'
+                : a.market_sentiment === 'BEARISH' ? '📉 看空 BEARISH'
+                : '➡️ 中性 NEUTRAL'}
             </div>
           )}
         </div>
-        <div className="analysis-body" style={{ maxHeight: 'none', padding: '20px 24px' }}>
-          {!a && searchResult.data.message && (
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px' }}>⚠️ {searchResult.data.message}</p>
-          )}
-          {a && <>
-            <div className="analysis-section">
-              <h4><Zap size={14} /> AI Summary</h4>
-              <p style={{ lineHeight: '1.6', fontSize: '0.9rem' }}>{a.executive_summary || '暂无摘要'}</p>
+
+        {/* ── Stock Targets: full-width prominent strip ── */}
+        {targets.length > 0 && (
+          <div className="topic-targets-strip">
+            <div className="topic-targets-label">
+              <Target size={12} /> 相关标的 · 建议价位
             </div>
-            {a.key_themes?.length > 0 && (
-              <div className="analysis-section">
-                <h4><Layers size={14} /> Key Themes</h4>
-                <div className="themes-list">{a.key_themes.map((t, i) => <span key={i} className="theme-tag">{t}</span>)}</div>
-              </div>
-            )}
-            {a.actionable_items?.length > 0 && (
-              <div className="analysis-section">
-                <h4><Target size={14} /> Actionable Ideas</h4>
-                <div className="action-list">{a.actionable_items.map((item, i) => <div key={i} className="action-item">{item}</div>)}</div>
-              </div>
-            )}
-          </>}
-          {searchResult.data.stock_targets?.length > 0 && (
-            <div className="analysis-section">
-              <h4><Target size={14} /> 相关股票 · 建议价位</h4>
-              <div className="stock-targets-grid">
-                {searchResult.data.stock_targets.map((st, i) => (
-                  <div key={i} className={`stock-target-card ${st.sentiment === 'POSITIVE' ? 'up' : st.sentiment === 'NEGATIVE' ? 'down' : ''}`}>
-                    <div className="st-header">
-                      <span className="st-symbol">{st.symbol}</span>
-                      <span className={`st-sentiment ${st.sentiment === 'POSITIVE' ? 'up' : st.sentiment === 'NEGATIVE' ? 'down' : ''}`}>
-                        {st.sentiment === 'POSITIVE' ? '看多' : st.sentiment === 'NEGATIVE' ? '看空' : '中性'}
+            <div className="topic-targets-row">
+              {targets.map((st, i) => {
+                const isBull = st.sentiment === 'POSITIVE';
+                const isBear = st.sentiment === 'NEGATIVE';
+                const upPct = ((st.sell_target - st.current_price) / st.current_price * 100).toFixed(1);
+                return (
+                  <div key={i} className={`tgt-card ${isBull ? 'bull' : isBear ? 'bear' : 'neutral'}`}>
+                    <div className="tgt-top">
+                      <span className="tgt-symbol">{st.symbol}</span>
+                      <span className={`tgt-badge ${isBull ? 'bull' : isBear ? 'bear' : 'neutral'}`}>
+                        {isBull ? '看多' : isBear ? '看空' : '中性'}
                       </span>
                     </div>
-                    <div className="st-price-row">
-                      <div className="st-price-col">
-                        <span className="st-price-label">现价</span>
-                        <span className="st-price-val">${st.current_price.toFixed(2)}</span>
+                    <div className="tgt-now">${st.current_price.toFixed(2)}</div>
+                    <div className="tgt-prices">
+                      <div className="tgt-price-block">
+                        <span className="tgt-price-lbl">{isBear ? '止损' : '买入区间'}</span>
+                        <span className="tgt-price-num buy">${st.buy_target.toFixed(2)}</span>
                       </div>
-                      <div className="st-price-col">
-                        <span className="st-price-label">{st.sentiment === 'NEGATIVE' ? '止损' : '买入'}</span>
-                        <span className="st-price-val" style={{ color: 'var(--success)' }}>${st.buy_target.toFixed(2)}</span>
+                      <div className="tgt-arrow">{isBear ? '↓' : '↑'}</div>
+                      <div className="tgt-price-block">
+                        <span className="tgt-price-lbl">{isBear ? '目标' : '止盈区间'}</span>
+                        <span className={`tgt-price-num ${isBear ? 'sell-bear' : 'sell-bull'}`}>${st.sell_target.toFixed(2)}</span>
                       </div>
-                      <div className="st-price-col">
-                        <span className="st-price-label">{st.sentiment === 'NEGATIVE' ? '目标' : '卖出'}</span>
-                        <span className="st-price-val" style={{ color: st.sentiment === 'NEGATIVE' ? 'var(--danger)' : 'var(--accent)' }}>${st.sell_target.toFixed(2)}</span>
+                      <div className={`tgt-pct ${isBear ? 'bear' : 'bull'}`}>
+                        {isBear ? '' : '+'}{upPct}%
                       </div>
                     </div>
-                    <p className="st-reason">{st.reason.replace(/^(POSITIVE|NEGATIVE|NEUTRAL):\s*/i, '')}</p>
+                    <p className="tgt-reason">{st.reason.replace(/^(POSITIVE|NEGATIVE|NEUTRAL):\s*/i, '')}</p>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          )}
+          </div>
+        )}
 
-          {searchResult.data.articles?.length > 0 && (
-            <div className="analysis-section">
-              <h4><Brain size={14} /> Source Articles</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {searchResult.data.articles.slice(0, 3).map((art, i) => (
-                  <div key={i} style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                    <span style={{ color: 'var(--accent)', marginRight: '6px' }}>▸</span>
-                    {art.title}
-                    {art.source && <span style={{ opacity: 0.5, marginLeft: '6px' }}>— {art.source}</span>}
-                  </div>
-                ))}
+        {/* ── Body: two columns ── */}
+        {!a && searchResult.data.message && (
+          <div className="topic-body">
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>⚠️ {searchResult.data.message}</p>
+          </div>
+        )}
+        {a && (
+          <div className="topic-body">
+            <div className="topic-col">
+              <div className="analysis-section">
+                <h4><Zap size={13} /> AI 摘要</h4>
+                <p style={{ lineHeight: 1.7, fontSize: '0.88rem' }}>{a.executive_summary || '暂无摘要'}</p>
               </div>
+              {a.key_themes?.length > 0 && (
+                <div className="analysis-section">
+                  <h4><Layers size={13} /> 核心主题</h4>
+                  <div className="themes-list">{a.key_themes.map((t, i) => <span key={i} className="theme-tag">{t}</span>)}</div>
+                </div>
+              )}
+              {searchResult.data.articles?.length > 0 && (
+                <div className="analysis-section">
+                  <h4><Brain size={13} /> 来源</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {searchResult.data.articles.slice(0, 3).map((art, i) => (
+                      <div key={i} style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                        <span style={{ color: 'var(--accent)', marginRight: '5px' }}>▸</span>
+                        {art.title}
+                        {art.source && <span style={{ opacity: 0.45, marginLeft: '5px' }}>— {art.source}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+            {a.actionable_items?.length > 0 && (
+              <div className="topic-col">
+                <div className="analysis-section">
+                  <h4><Activity size={13} /> 操作建议</h4>
+                  <div className="action-list">
+                    {a.actionable_items.map((item, i) => <div key={i} className="action-item">{item}</div>)}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };

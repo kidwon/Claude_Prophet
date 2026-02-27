@@ -318,7 +318,7 @@ func (ic *IntelligenceController) HandleTopicAnalysis(c *gin.Context) {
 	stockTargets := make([]stockTarget, 0)
 
 	if cleanedNews != nil && len(cleanedNews.StockMentions) > 0 {
-		ctx, cancelFetch := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancelFetch := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancelFetch()
 
 		count := 0
@@ -326,11 +326,6 @@ func (ic *IntelligenceController) HandleTopicAnalysis(c *gin.Context) {
 			if count >= 5 {
 				break
 			}
-			bar, err := ic.dataService.GetLatestBar(ctx, symbol)
-			if err != nil || bar == nil {
-				continue
-			}
-			price := bar.Close
 
 			// Parse sentiment prefix from detail string (e.g. "POSITIVE: reason...")
 			upperDetail := strings.ToUpper(detail)
@@ -341,17 +336,60 @@ func (ic *IntelligenceController) HandleTopicAnalysis(c *gin.Context) {
 				sentiment = "NEGATIVE"
 			}
 
+			// Use full technical analysis for support/resistance-based targets
+			analysis, err := ic.stockAnalysisService.AnalyzeStock(ctx, symbol)
+			if err != nil || analysis == nil {
+				continue
+			}
+
+			price := analysis.CurrentPrice
+			support := analysis.Technical.Support
+			resistance := analysis.Technical.Resistance
+
+			// Fallback: if support/resistance are zero or too close to price, derive from volatility
+			vol := analysis.Technical.Volatility // 30-day % volatility
+			if vol == 0 {
+				vol = 0.05 // default 5%
+			}
+
 			var buyTarget, sellTarget float64
 			switch sentiment {
 			case "POSITIVE":
-				buyTarget = price * 0.97   // enter on 3% pullback
-				sellTarget = price * 1.10  // 10% upside target
+				// Buy near support; sell at resistance.
+				// If support is valid (within 20% below price), use it. Otherwise use vol-scaled entry.
+				if support > 0 && support >= price*0.80 {
+					buyTarget = support
+				} else {
+					buyTarget = price * (1 - vol)
+				}
+				if resistance > 0 && resistance > price {
+					sellTarget = resistance
+				} else {
+					sellTarget = price * (1 + vol*2)
+				}
 			case "NEGATIVE":
-				buyTarget = price * 0.90   // downside support / stop level
-				sellTarget = price * 0.95  // short target / exit level
-			default:
-				buyTarget = price * 0.97
-				sellTarget = price * 1.05
+				// Stop above resistance; target at support.
+				if resistance > 0 && resistance > price {
+					buyTarget = resistance // stop-loss reference above resistance
+				} else {
+					buyTarget = price * (1 + vol)
+				}
+				if support > 0 && support < price {
+					sellTarget = support // downside target
+				} else {
+					sellTarget = price * (1 - vol*2)
+				}
+			default: // NEUTRAL
+				if support > 0 && support >= price*0.85 {
+					buyTarget = support
+				} else {
+					buyTarget = price * (1 - vol)
+				}
+				if resistance > 0 && resistance > price {
+					sellTarget = resistance
+				} else {
+					sellTarget = price * (1 + vol)
+				}
 			}
 
 			stockTargets = append(stockTargets, stockTarget{
