@@ -223,7 +223,7 @@ const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHisto
   };
 
   return (
-    <div className="sm-overlay" onClick={onClose}>
+    <div className="sm-overlay" onClick={searchResult ? undefined : onClose}>
       <div className="sm-panel" onClick={e => e.stopPropagation()}>
 
         {/* Search Input Row */}
