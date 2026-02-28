@@ -21,10 +21,31 @@ const saveHistory = (history) => {
   try { localStorage.setItem('ygg_search_history', JSON.stringify(history)); } catch {}
 };
 
-const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHistory }) => {
+const ReasonTooltip = ({ text }) => {
+  const [pos, setPos] = useState(null);
+  return (
+    <span
+      className="tgt-col-reason"
+      onMouseMove={e => setPos({ x: e.clientX, y: e.clientY })}
+      onMouseLeave={() => setPos(null)}
+    >
+      <span className="tgt-reason-text">{text}</span>
+      {pos && (
+        <div className="tgt-tooltip" style={{
+          left: Math.min(pos.x + 12, window.innerWidth - 380),
+          top: pos.y - 8,
+          transform: 'translateY(-100%)',
+        }}>{text}</div>
+      )}
+    </span>
+  );
+};
+
+const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHistory, onDeleteHistory }) => {
   const [query, setQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef(null);
+  const isComposing = useRef(false);
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 60);
@@ -43,7 +64,7 @@ const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHisto
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') submit();
+    if (e.key === 'Enter' && !isComposing.current) submit();
     if (e.key === 'Escape') { if (query) setQuery(''); else onClose(); }
   };
 
@@ -159,12 +180,7 @@ const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHisto
                     <span className="tgt-dir">{isBear ? '↓' : '↑'}</span>
                     <span className={`tgt-mono ${isBear ? 'tgt-sell-bear' : 'tgt-sell-bull'}`}>${st.sell_target.toFixed(2)}</span>
                     <span className={`tgt-pct ${isBear ? 'bear' : 'bull'}`}>{pctStr}</span>
-                    <span
-                      className="tgt-col-reason tgt-reason-text"
-                      title={st.reason.replace(/^(POSITIVE|NEGATIVE|NEUTRAL):\s*/i, '')}
-                    >
-                      {st.reason.replace(/^(POSITIVE|NEGATIVE|NEUTRAL):\s*/i, '')}
-                    </span>
+                    <ReasonTooltip text={st.reason.replace(/^(POSITIVE|NEGATIVE|NEUTRAL):\s*/i, '')} />
                   </div>
                 );
               })}
@@ -223,7 +239,7 @@ const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHisto
   };
 
   return (
-    <div className="sm-overlay" onClick={searchResult ? undefined : onClose}>
+    <div className="sm-overlay" onClick={searchResult || isSearching ? undefined : onClose}>
       <div className="sm-panel" onClick={e => e.stopPropagation()}>
 
         {/* Search Input Row */}
@@ -237,6 +253,8 @@ const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHisto
               value={query}
               onChange={e => { setQuery(e.target.value); setShowDropdown(true); }}
               onKeyDown={handleKeyDown}
+              onCompositionStart={() => { isComposing.current = true; }}
+              onCompositionEnd={() => { isComposing.current = false; }}
               onFocus={() => setShowDropdown(true)}
               onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
               disabled={isSearching}
@@ -272,7 +290,10 @@ const SearchModal = ({ onClose, onSearch, isSearching, searchResult, searchHisto
             <div className="sm-chips-row">
               <span className="sm-chips-label">🕐 最近</span>
               {searchHistory.slice(0, 6).map((h, i) => (
-                <button key={i} className="sm-chip sm-chip-recent" onClick={() => { setQuery(h); submit(h); }}>{h}</button>
+                <span key={i} className="sm-chip-recent-wrap">
+                  <button className="sm-chip sm-chip-recent" onClick={() => { setQuery(h); submit(h); }}>{h}</button>
+                  <button className="sm-chip-del" onClick={(e) => { e.stopPropagation(); onDeleteHistory(h); }}>×</button>
+                </span>
               ))}
             </div>
           )}
@@ -390,6 +411,14 @@ function App() {
   const addToHistory = (query) => {
     setSearchHistory(prev => {
       const next = [query, ...prev.filter(q => q !== query)].slice(0, 8);
+      saveHistory(next);
+      return next;
+    });
+  };
+
+  const deleteFromHistory = (query) => {
+    setSearchHistory(prev => {
+      const next = prev.filter(q => q !== query);
       saveHistory(next);
       return next;
     });
@@ -787,6 +816,7 @@ function App() {
           isSearching={isSearching}
           searchResult={searchResult}
           searchHistory={searchHistory}
+          onDeleteHistory={deleteFromHistory}
         />
       )}
 

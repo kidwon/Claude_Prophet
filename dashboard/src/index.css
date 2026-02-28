@@ -1123,7 +1123,7 @@ body {
 
 .sm-panel {
   width: 100%;
-  max-width: 780px;
+  max-width: 960px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
   border-radius: 20px;
@@ -1259,15 +1259,38 @@ body {
   border-color: var(--accent);
   box-shadow: 0 0 12px var(--accent-glow);
 }
-.sm-chip-recent {
+.sm-chip-recent-wrap {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-glass);
+  border-radius: 20px;
+  overflow: hidden;
   background: var(--bg-glass);
+  transition: border-color 0.15s;
+}
+.sm-chip-recent-wrap:hover { border-color: var(--text-muted); }
+
+.sm-chip-recent {
+  background: transparent;
+  border: none;
   color: var(--text-muted);
+  border-radius: 0;
+  padding: 4px 8px 4px 12px;
 }
-.sm-chip-recent:hover {
-  background: rgba(255,255,255,0.08);
-  color: var(--text-main);
-  border-color: var(--text-muted);
+.sm-chip-recent-wrap:hover .sm-chip-recent { color: var(--text-main); }
+
+.sm-chip-del {
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  padding: 4px 7px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
 }
+.sm-chip-del:hover { background: var(--danger-glow); color: var(--danger); }
 
 /* Result Area */
 .sm-result-area {
@@ -1417,7 +1440,11 @@ body {
 .tgt-pct.bull { color: var(--success); }
 .tgt-pct.bear { color: var(--danger); }
 
-.tgt-col-reason { min-width: 0; position: relative; }
+.tgt-col-reason {
+  min-width: 0;
+  position: relative;
+  cursor: default;
+}
 .tgt-reason-text {
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -1425,7 +1452,23 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: default;
+  display: block;
+}
+.tgt-tooltip {
+  position: fixed;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: var(--text-main);
+  line-height: 1.5;
+  white-space: normal;
+  min-width: 240px;
+  max-width: 360px;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  pointer-events: none;
 }
 
 

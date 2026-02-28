@@ -108,20 +108,23 @@ func (sas *StockAnalysisService) AnalyzeStock(ctx context.Context, symbol string
 		Timestamp: time.Now(),
 	}
 
-	// Get current quote
+	// Get current quote (used as fallback only)
 	quote, err := sas.dataService.GetLatestQuote(ctx, symbol)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quote: %w", err)
 	}
-	analysis.CurrentPrice = quote.BidPrice
+	// Use mid-price from quote as initial fallback
+	analysis.CurrentPrice = (quote.BidPrice + quote.AskPrice) / 2
 
-	// Get latest bar for volume
+	// Get latest bar — bar.Close is the most accurate last-trade price
 	bar, err := sas.dataService.GetLatestBar(ctx, symbol)
 	if err == nil {
 		analysis.Technical.Price = bar.Close
 		analysis.Technical.Volume = bar.Volume
+		// Prefer bar close over quote mid as current price
+		analysis.CurrentPrice = bar.Close
 	} else {
-		analysis.Technical.Price = quote.BidPrice
+		analysis.Technical.Price = analysis.CurrentPrice
 	}
 
 	// Get historical data for technical analysis (30 days)
